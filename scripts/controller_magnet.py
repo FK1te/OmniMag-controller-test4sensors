@@ -126,11 +126,11 @@ class MagnetControllerPID(MagnetController):
         self.e_prev = proportional_term
         return proportional_term, integral_term, derivative_term
     
-    def compute_control_currents(self, m_current, m_target):
+    def compute_control_currents(self, m_current, m_target, debug = False):
         p, i, d = self.compute_pid(m_current, m_target)
         control_torque = self.kp * p + self.ki * i + self.kd * d
         u = np.cross(control_torque, self.__m_hat)/self.__m_mag + (self.lmbd * self.__m_mag) * self.__m_hat
-        return self.clip_input_currents(1e3*u)
+        return self.clip_input_currents(1e3*u) if debug == False else self.kp * p , self.ki * i , self.kd * d , control_torque, self.get_error_angles_in_degrees()
     
     def reset(self):
         self.t0 = None
