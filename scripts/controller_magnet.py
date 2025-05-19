@@ -13,7 +13,7 @@ class MagnetController(ABC):
         self.__i_nominal = MAGNET_CONTROLLER_PARAMS["currents"]["I_nominal"]
         self.__i_hold = MAGNET_CONTROLLER_PARAMS["currents"]["I_hold"]
         self.__i_max = MAGNET_CONTROLLER_PARAMS["currents"]["I_max"]
-        self.__i_coefficients = MAGNET_CONTROLLER_PARAMS["currents"]["i_coefficients"]
+        self.__i_coefficients = MAGNET_CONTROLLER_PARAMS["currents"]["I_coefficients"]
         default_current_dirs = MAGNET_CONTROLLER_PARAMS["currents"]
         self.__current_dirs_in_coils = np.array(
             [

@@ -14,6 +14,8 @@ class MagneticFieldControllerApp(tk.Frame):
         super().__init__(master)
         self.grid(padx=10, pady=10)
 
+        self.controller = controller
+
         v = tk.Scrollbar(master, orient='vertical')
 
         v.config(command=tk.YView) #for vertical scrollbar
@@ -24,7 +26,7 @@ class MagneticFieldControllerApp(tk.Frame):
         self.canvas.get_tk_widget().grid(row=0, column=0, columnspan=4, pady=(0, 10))
 
 
-        self.plot_updating = tk.BooleanVar(value=True)
+        self.plot_updating = tk.BooleanVar(value=False)
 
         self.create_plots()
         self.create_input_frames()
@@ -32,14 +34,13 @@ class MagneticFieldControllerApp(tk.Frame):
 
         self.update_plots()
 
-        self.controller = controller
+        
 
     def create_plots(self):
         self.axes = []
         self.lines = []
         self.plot_data = np.zeros((5, 100))
-        self.x_data = np.linspace(0, 10, 100)
-
+        self.x_data =  np.zeros(100)
         plot_labels = ["|P(t)|", "|I(t)|", "|D(t)|", "|u(t)|", "|e(t)|"]
 
         for i in range(5):
@@ -126,20 +127,45 @@ class MagneticFieldControllerApp(tk.Frame):
         self.quit()
 
     def set_target(self):
-        # TODO: Logic to send target vector to controller
-        print("Set Target clicked")
+        try:
+            vec = np.array([
+                    float(self.init_x_entry.get()),
+                    float(self.init_y_entry.get()),
+                    float(self.init_z_entry.get())
+            ])
+            self.init_vec = vec/np.linalg.norm(vec)
+        except:
+            self.init_vec = np.array([1, 0, 0])
+
+        try:
+            vec = np.array([
+                    float(self.target_x_entry.get()),
+                    float(self.target_y_entry.get()),
+                    float(self.target_z_entry.get())
+            ])
+            self.target_vec = vec/np.linalg.norm(vec)
+        except:
+            self.target_vec = np.array([0, 1, 0])
+
+        self.controller.reset()
+        print("Target vector is set")
 
     def set_gains(self):
         kp = self.kp_slider.get()
         ki = self.ki_slider.get()
         kd = self.kd_slider.get()
-        print(f"Set Gains -> Kp: {kp}, Ki: {ki}, Kd: {kd}")
+        self.controller.set_pid_gains(kp, ki, kd)
+        print(f"Set Gains -> Kp: {kp}, Ki: {ki}, Kd: {kd}")   
 
     def update_plots(self):
         if self.plot_updating.get():
+            p_term, i_term, d_term = self.controller.compute_pid(self.init_vec, self.target_vec)
+            u = np.zeros(3)
+            e = self.controller.get_error_angles_in_degrees()
+            data_list = [np.linalg.norm(p_term), np.linalg.norm(i_term), np.linalg.norm(d_term), np.linalg.norm(u),e]
             for i in range(5):
                 self.plot_data[i] = np.roll(self.plot_data[i], -1)
-                self.plot_data[i, -1] = np.sin(0.2 * self.x_data[-1] + i)
+                self.plot_data[i, -1] = data_list[i]
                 self.lines[i].set_ydata(self.plot_data[i])
                 max_value = np.max(self.plot_data[i]) + 1
                 min_value = np.min(self.plot_data[i]) - 1
@@ -147,10 +173,10 @@ class MagneticFieldControllerApp(tk.Frame):
 
             self.canvas.draw()
 
-        self.after(100, self.update_plots)
+        self.after(2500, self.update_plots)
 
 if __name__ == "__main__":
     root = tk.Tk()
     root.title("Magnetic Field Controller")
-    app = MagneticFieldControllerApp(master=root)
+    app = MagneticFieldControllerApp(master=root, controller=MagnetControllerPID())
     app.mainloop()

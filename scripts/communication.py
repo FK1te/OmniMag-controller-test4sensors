@@ -143,11 +143,14 @@ def main():
         return
     
     comm.change_status_enable_disable_current(enable=True)
-    comm.set_currents_in_coils([300, 0, 0])
+    comm.set_currents_in_coils([1000, 0, 0])
     try:
         while True:
-            print(f"[✓] Sensor readings: {comm.get_sensor_readings()}")
-            print(f"[✓] Magnet direction: {comm.get_magnet_direction()}")
+            s_vec = comm.get_magnet_direction()
+            s_vec_norm = np.linalg.norm(s_vec)
+            if s_vec_norm > 1e-8:
+                s_vec /= np.linalg.norm(s_vec)
+                print(f"[✓] Sensor readings: {s_vec}")
 
     except KeyboardInterrupt:
         print("\n[✓] Interrupted by user.")
