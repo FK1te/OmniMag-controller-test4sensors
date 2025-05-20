@@ -168,7 +168,7 @@ class MagneticFieldControllerApp(tk.Frame):
             self.x_data = np.roll(self.x_data, -1)
             self.x_data[-1] = current_time
 
-            u, data = self.controller.compute_control_currents(self.magnetic_field_meas, self.target_vec, True)
+            u, data = self.controller.compute_control_currents(self.magnetic_field_meas, self.target_vec)
             self.communication.set_currents_in_coils(u)
 
             plot_values = [data['p_term_mag'],
@@ -184,6 +184,11 @@ class MagneticFieldControllerApp(tk.Frame):
                 self.lines[i].set_xdata(self.x_data)
                 self.axes[i].relim()
                 self.axes[i].autoscale_view()
+                
+                y_min = np.min(self.plot_data[i])
+                y_max = np.max(self.plot_data[i])
+                padding = (y_max - y_min) * 0.1 if y_max != y_min else 1
+                self.axes[i].set_ylim(y_min - padding, y_max + padding)
 
             self.canvas.draw()
             
