@@ -88,9 +88,9 @@ class MagneticFieldControllerApp(tk.Frame):
         pid_slider_frame = tk.LabelFrame(self, text="PID Gains", padx=10, pady=5)
         pid_slider_frame.grid(row=3, column=0, columnspan=2, sticky="w", pady=10)
 
-        self.kp_slider = self._create_pid_slider(pid_slider_frame, "Kp", 0, 100, 10)
-        self.ki_slider = self._create_pid_slider(pid_slider_frame, "Ki", 1, 100, 0)
-        self.kd_slider = self._create_pid_slider(pid_slider_frame, "Kd", 2, 100, 0)
+        self.kp_slider = self._create_pid_slider(pid_slider_frame, "Kp", 0, 2000, 1.0)
+        self.ki_slider = self._create_pid_slider(pid_slider_frame, "Ki", 1, 2000, 0)
+        self.kd_slider = self._create_pid_slider(pid_slider_frame, "Kd", 2, 2000, 0)
 
         tk.Button(pid_slider_frame, text="Set Gains", command=self.set_gains).grid(row=1, column=0, columnspan=3, pady=(10, 0))
 
@@ -104,12 +104,13 @@ class MagneticFieldControllerApp(tk.Frame):
         frame = tk.Frame(parent)
         frame.grid(row=0, column=column, padx=10)
         tk.Label(frame, text=label).pack()
-        slider = tk.Scale(frame, from_=0.0, to=max_gain, resolution=1.0, orient="horizontal", length=150)
+        slider = tk.Scale(frame, from_=0.0, to=max_gain, resolution=1, orient="horizontal", length=150)
         slider.set(default_value)
         slider.pack()
         return slider
 
     def shutdown(self):
+        self.communication.shutdown()
         self.quit()
 
     def set_target(self):
@@ -146,11 +147,13 @@ class MagneticFieldControllerApp(tk.Frame):
         print(f"Set Gains -> Kp: {kp}, Ki: {ki}, Kd: {kd}")
 
     def update_plots(self):
-        if self.plot_updating.get() and self.magnetic_field_meas:
-            data_list = self.controller.get_error_angles_in_degrees(self.magnetic_field_meas, self.target_vec, True)
+        if self.plot_updating.get() and self.magnetic_field_meas is not None:
+            u, values_list = self.controller.compute_control_currents(self.magnetic_field_meas, self.target_vec, True)
+            self.communication.set_currents_in_coils(u)
+            values = [np.linalg.norm(vec) for vec in values_list]
             for i in range(5):
                 self.plot_data[i] = np.roll(self.plot_data[i], -1)
-                self.plot_data[i, -1] = data_list[i]
+                self.plot_data[i, -1] = values[i]
                 self.lines[i].set_ydata(self.plot_data[i])
                 max_val = np.max(self.plot_data[i]) + 1
                 min_val = np.min(self.plot_data[i]) - 1
@@ -169,5 +172,5 @@ if __name__ == "__main__":
     root.title("Magnetic Field Controller")
     comm = ArduinoMinimacsCommunication()
     comm.change_status_enable_disable_current(True)
-    app = MagneticFieldControllerApp(master=root, controller=MagnetControllerPID())
+    app = MagneticFieldControllerApp(master=root, controller=MagnetControllerPID(), communication=comm)
     app.mainloop()

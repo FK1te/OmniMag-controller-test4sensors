@@ -22,46 +22,46 @@ class MagnetController(ABC):
                 default_current_dirs["current_direction_in_coils"]["coil_z"],
             ]
         )
-
-        self.__i_multp = np.diag(self.__current_dirs_in_coils) @ np.diag(self.__i_coefficients)
-
-        self.__m_hat = None
-        self.__m_mag = None
-        self.__m_target = None
+        self.m_hat = None
+        self.m_mag = None
+        self.m_target = None
 
     @abstractmethod
     def compute_control_currents(self, m_current, m_target):
         pass
 
     def get_target_magnet_direction(self):
-        return self.__m_target
+        return self.m_target
 
     def set_target_magnet_direction(self, vec):
         m = vec.copy() 
         m_mag = np.linalg.norm(m)
         assert m_mag > 1e-8, "Target direction should be a non-zero vector!"
 
-        self.__m_target = m/m_mag
+        self.m_target = m/m_mag
 
     def set_current_magnet_direction(self, vec):
         m = vec.copy() 
         m_mag = np.linalg.norm(m)
         assert m_mag > 1e-8, "Target direction should be a non-zero vector!"
         
-        self.__m_mag = m_mag
-        self.__m_hat = m/m_mag
+        self.m_mag = m_mag
+        self.m_hat = m/m_mag
 
     def get_error_vector(self):
-        return np.cross(self.__m_hat, self.__m_target)
+        return np.cross(self.m_hat, self.m_target)
 
     def get_error_angles_in_degrees(self):
-        cos_theta = np.dot(self.__m_hat, self.__m_target)
+        cos_theta = np.dot(self.m_hat, self.m_target)
         sin_theta = np.linalg.norm(self.get_error_vector())
         return np.rad2deg(np.arctan2(sin_theta, cos_theta))
     
     def clip_input_currents(self, u):
-        output_currents_values_mA = np.clip(np.round(u), -1e3 * self.__i_max, 1e3 * self.__i_max)
-        output_currents_values_mA = np.round(np.diag(self.__i_multp) @  output_currents_values_mA)
+        if np.any(np.abs(u) > 1e3 * self.__i_max):
+            output_currents_values_mA = u / np.linalg.norm(u) * 1e3 * self.__i_max
+        else:
+            output_currents_values_mA = u.copy()
+        output_currents_values_mA = np.round(np.diag(self.__current_dirs_in_coils) @  output_currents_values_mA)
         return output_currents_values_mA        
 
 class MagnetControllerStatic(MagnetController):
@@ -71,7 +71,7 @@ class MagnetControllerStatic(MagnetController):
     def compute_control_currents(self, m_current, m_target):
         self.set_current_magnet_direction(m_current)
         self.set_target_magnet_direction(m_target)
-        u = 1e3 * self.__i_nominal * self.__m_target
+        u = 1e3 * self.__i_nominal * self.m_target
         return self.clip_input_currents(u)
 
 class MagnetControllerPID(MagnetController):
@@ -129,8 +129,11 @@ class MagnetControllerPID(MagnetController):
     def compute_control_currents(self, m_current, m_target, debug = False):
         p, i, d = self.compute_pid(m_current, m_target)
         control_torque = self.kp * p + self.ki * i + self.kd * d
-        u = np.cross(control_torque, self.__m_hat)/self.__m_mag + (self.lmbd * self.__m_mag) * self.__m_hat
-        return self.clip_input_currents(1e3*u) if debug == False else self.kp * p , self.ki * i , self.kd * d , control_torque, self.get_error_angles_in_degrees()
+        print(control_torque)
+        u = np.cross(control_torque, self.m_hat) + self.lmbd * self.m_hat
+        u = self.clip_input_currents(u)
+        print(u)
+        return u, [self.kp * p , self.ki * i , self.kd * d , control_torque, self.get_error_angles_in_degrees()]
     
     def reset(self):
         self.t0 = None
