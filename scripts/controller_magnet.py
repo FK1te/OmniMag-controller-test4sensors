@@ -79,9 +79,9 @@ class MagnetControllerPID(MagnetController):
         super().__init__()
         pid_params = MAGNET_CONTROLLER_PARAMS["pid_params"]
 
-        self.kp = pid_params["kp"]
-        self.ki = pid_params["ki"]
-        self.kd = pid_params["kd"]
+        self.kp = pid_params["kp"] * np.eye(3)
+        self.ki = pid_params["ki"] * np.eye(3)
+        self.kd = pid_params["kd"] * np.eye(3)
         self.sat_e = pid_params["saturation_integral_term"]
         self.sat_v = pid_params["saturation_derivative_term"]
         self.lmbd = pid_params["lambda"]
@@ -90,10 +90,11 @@ class MagnetControllerPID(MagnetController):
         self.e_prev = None
         self.q_e_prev = None
 
-    def set_pid_gains(self, kp, ki, kd):
-        self.kp = kp
-        self.ki = ki
-        self.kd = kd
+    def set_pid_gains(self, gains):
+        self.kp = np.diag([gains["KP_x"], gains["KP_y"], gains["KP_z"]])
+        self.ki = np.diag([gains["KI_x"], gains["KI_y"], gains["KI_z"]])
+        self.kd = np.diag([gains["KD_x"], gains["KD_y"], gains["KD_z"]])
+        self.lmbd = gains["Lambda"]
 
     def saturation_v(self, z):
         z_norm = np.linalg.norm(z)
@@ -126,14 +127,38 @@ class MagnetControllerPID(MagnetController):
         self.e_prev = proportional_term
         return proportional_term, integral_term, derivative_term
     
-    def compute_control_currents(self, m_current, m_target, debug = False):
+    def compute_control_currents(self, m_current, m_target):
         p, i, d = self.compute_pid(m_current, m_target)
-        control_torque = self.kp * p + self.ki * i + self.kd * d
-        print(control_torque)
-        u = np.cross(control_torque, self.m_hat) + self.lmbd * self.m_hat
+        tau = self.kp @ p + self.ki @ i + self.kd @ d
+        u = np.cross(tau, self.m_hat) + self.lmbd * self.m_hat
         u = self.clip_input_currents(u)
-        print(u)
-        return u, [self.kp * p , self.ki * i , self.kd * d , control_torque, self.get_error_angles_in_degrees()]
+
+        data = {
+                'time': 0.0,
+                'm_x': self.m_hat[0], 
+                'm_y': self.m_hat[1], 
+                'm_z': self.m_hat[2], 
+                'm_target_x': self.m_target[0],
+                'm_target_y': self.m_target[1],
+                'm_target_z': self.m_target[2],
+                'angular_error_degrees': self.get_error_angles_in_degrees(),
+                'p_term_mag': np.linalg.norm(p),
+                'i_term_mag': np.linalg.norm(i),
+                'd_term_mag': np.linalg.norm(d),
+                'input_torque_mag': np.linalg.norm(tau),
+                'KP_x': self.kp[0, 0],
+                'KI_x': self.ki[0, 0],
+                'KD_x': self.kd[0, 0],
+                'KP_y': self.kp[1, 1],
+                'KI_y': self.ki[1, 1],
+                'KD_y': self.kd[1, 1],
+                'KP_z': self.kp[2, 2],
+                'KI_z': self.ki[2, 2],
+                'KD_z': self.kd[2, 2],
+                'i_x': u[0], 'i_y': u[1], 'i_z': u[2]
+            }
+
+        return u, data
     
     def reset(self):
         self.t0 = None

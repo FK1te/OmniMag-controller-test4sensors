@@ -104,7 +104,7 @@ class ArduinoMinimacsCommunication():
         else:
             return np.zeros(6)
 
-    def get_magnet_direction(self):
+    def get_magnetic_field(self):
         s_vec = self.get_sensor_readings()
         return self.S_dagger_matrix @ s_vec
 
@@ -146,7 +146,7 @@ def main():
     comm.set_currents_in_coils([1000, 0, 0])
     try:
         while True:
-            s_vec = comm.get_magnet_direction()
+            s_vec = comm.get_magnetic_field()
             s_vec_norm = np.linalg.norm(s_vec)
             if s_vec_norm > 1e-8:
                 s_vec /= np.linalg.norm(s_vec)
