@@ -4,6 +4,7 @@ import csv
 import time
 import numpy as np
 
+sys.path.append('./')
 sys.path.append('./scripts')
 
 from scripts.communication import ArduinoMinimacsCommunication
@@ -78,6 +79,9 @@ def main():
     comm = ArduinoMinimacsCommunication()
     comm.change_status_enable_disable_current(True)
 
+    for index in range(5):
+        print(comm.get_sensor_readings())
+
     if controller_name == "static":
         controller = MagnetControllerStatic()
     elif "pid" in controller_name.lower():
@@ -96,9 +100,14 @@ def main():
             'KP_x', 'KI_x', 'KD_x', 'KP_y', 'KI_y', 'KD_y', 'KP_z', 'KI_z', 'KD_z',
             'i_x', 'i_y', 'i_z', 'target_angle'
         ]
+    
+    flag = False
 
     try:
         while True:
+            if flag:
+                continue
+            flag = True
             for i, case in enumerate(test_cases):
                 base_vector = case['base_vec']
                 base_vector_name = case['base_vec_name']
@@ -108,7 +117,7 @@ def main():
 
                 for axis in rotation_axes:
                     rotate = rotation_map[axis.lower()]
-                    filename = f"rotation_logs/{base_vector_name}_rot_{axis}deg.csv"
+                    filename = f"rotation_logs/{controller_name}_controller_{base_vector_name.lower()}_unit_vector_rot_around_{axis.lower()}_axis.csv"
                     with open(filename, mode='w', newline='') as file:
                         writer = csv.writer(file)
                         writer.writerow(data_log_columns)
@@ -124,8 +133,12 @@ def main():
                                 comm.set_currents_in_coils(u)
                                 data['time'] = time.time() - start_time
                                 data['target_angle'] = 0
-                                writer.writerow(data)
+                                data_list = [data[item_name] for item_name in data_log_columns]
+                                writer.writerow(data_list)
                                 time.sleep(0.1)
+
+                                print(data['angular_error_degrees'])
+                                print(u)
 
                             t0 = time.time()
                             while time.time() - t0 < 10.0:
@@ -134,11 +147,18 @@ def main():
                                 comm.set_currents_in_coils(u)
                                 data['time'] = time.time() - start_time
                                 data['target_angle'] = angle_deg
-                                writer.writerow(data)
+                                data_list = [data[item_name] for item_name in data_log_columns]
+                                writer.writerow(data_list)
                                 time.sleep(0.1)
+                                print(data['angular_error_degrees'])
+                                print(u)
 
     except KeyboardInterrupt:
         print("\n[✓] Interrupted by user.")
     finally:
         comm.shutdown()
         print("[✓] Arduino and Minimacs communications shutdown complete.")
+
+
+if __name__ == "__main__":
+    main()
