@@ -1,5 +1,9 @@
+import sys
 import random
 from time import time, sleep
+
+sys.path.append('./')
+sys.path.append('./scripts')
 
 from scripts.communication import ArduinoMinimacsCommunication
 
@@ -21,8 +25,9 @@ def main():
             comm.set_currents_in_coils(current_input)
             t_minimacs = time() - t0
 
-            print(f"[✓] Arduino communication time: {t_arduino} seconds")
-            print(f"[✓] Minimacs communication time: {t_minimacs} seconds")
+            print(f"[✓] Arduino communication time interval: {t_arduino * 1e3} ms.")
+            print(f"[✓] Minimacs communication time interval: {t_minimacs * 1e3} ,s.")
+            sleep(0.1)
 
     except KeyboardInterrupt:
         print("\n[✓] Interrupted by user.")

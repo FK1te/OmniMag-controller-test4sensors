@@ -78,17 +78,17 @@ class MagneticFieldControllerApp(tk.Frame):
         pid_frame = tk.LabelFrame(self, text="PID Gains", padx=10, pady=5)
         pid_frame.grid(row=1, column=1, columnspan=2, sticky="new", pady=10)
 
-        self.kp_slider_x = self._create_pid_slider(pid_frame, "Kp X", 0, default_value=450)
-        self.ki_slider_x = self._create_pid_slider(pid_frame, "Ki X", 1)
-        self.kd_slider_x = self._create_pid_slider(pid_frame, "Kd X", 2)
+        self.kp_slider_x = self._create_pid_slider(pid_frame, "Kp X", 0, default_value=600)
+        self.ki_slider_x = self._create_pid_slider(pid_frame, "Ki X", 1, default_value=893)
+        self.kd_slider_x = self._create_pid_slider(pid_frame, "Kd X", 2, default_value=20)
 
-        self.kp_slider_y = self._create_pid_slider(pid_frame, "Kp Y", 3, default_value=450)
-        self.ki_slider_y = self._create_pid_slider(pid_frame, "Ki Y", 4)
-        self.kd_slider_y = self._create_pid_slider(pid_frame, "Kd Y", 5)
+        self.kp_slider_y = self._create_pid_slider(pid_frame, "Kp Y", 3, default_value=600)
+        self.ki_slider_y = self._create_pid_slider(pid_frame, "Ki Y", 4, default_value=702)
+        self.kd_slider_y = self._create_pid_slider(pid_frame, "Kd Y", 5, default_value=16)
 
-        self.kp_slider_z = self._create_pid_slider(pid_frame, "Kp Z", 6, default_value=450)
-        self.ki_slider_z = self._create_pid_slider(pid_frame, "Ki Z", 7)
-        self.kd_slider_z = self._create_pid_slider(pid_frame, "Kd Z", 8)
+        self.kp_slider_z = self._create_pid_slider(pid_frame, "Kp Z", 6, default_value=510)
+        self.ki_slider_z = self._create_pid_slider(pid_frame, "Ki Z", 7, default_value=382)
+        self.kd_slider_z = self._create_pid_slider(pid_frame, "Kd Z", 8, default_value=9)
 
         self.lambda_slider = self._create_pid_slider(pid_frame, "Lambda", 9, to=10, default_value=1.0, resolution=0.1)
 
