@@ -10,12 +10,12 @@ from test_params import MAGNET_CONTROLLER_PARAMS
 class MagnetController(ABC):
     def __init__(self):
         super().__init__()
-        self.__i_nominal = MAGNET_CONTROLLER_PARAMS["currents"]["I_nominal"]
-        self.__i_hold = MAGNET_CONTROLLER_PARAMS["currents"]["I_hold"]
-        self.__i_max = MAGNET_CONTROLLER_PARAMS["currents"]["I_max"]
-        self.__i_coefficients = MAGNET_CONTROLLER_PARAMS["currents"]["I_coefficients"]
+        self.i_nominal = MAGNET_CONTROLLER_PARAMS["currents"]["I_nominal"]
+        self.i_hold = MAGNET_CONTROLLER_PARAMS["currents"]["I_hold"]
+        self.i_max = MAGNET_CONTROLLER_PARAMS["currents"]["I_max"]
+        self.i_coefficients = MAGNET_CONTROLLER_PARAMS["currents"]["I_coefficients"]
         default_current_dirs = MAGNET_CONTROLLER_PARAMS["currents"]
-        self.__current_dirs_in_coils = np.array(
+        self.current_dirs_in_coils = np.array(
             [
                 default_current_dirs["current_direction_in_coils"]["coil_x"],
                 default_current_dirs["current_direction_in_coils"]["coil_y"],
@@ -57,11 +57,11 @@ class MagnetController(ABC):
         return np.rad2deg(np.arctan2(sin_theta, cos_theta))
     
     def clip_input_currents(self, u):
-        if np.any(np.abs(u) > 1e3 * self.__i_max):
-            output_currents_values_mA = u / np.linalg.norm(u) * 1e3 * self.__i_max
+        if np.any(np.abs(u) > 1e3 * self.i_max):
+            output_currents_values_mA = u / np.linalg.norm(u) * 1e3 * self.i_max
         else:
             output_currents_values_mA = u.copy()
-        output_currents_values_mA = np.round(np.diag(self.__current_dirs_in_coils) @  output_currents_values_mA)
+        output_currents_values_mA = np.round(np.diag(self.current_dirs_in_coils) @  output_currents_values_mA)
         return output_currents_values_mA        
 
 class MagnetControllerStatic(MagnetController):
@@ -71,7 +71,7 @@ class MagnetControllerStatic(MagnetController):
     def compute_control_currents(self, m_current, m_target):
         self.set_current_magnet_direction(m_current)
         self.set_target_magnet_direction(m_target)
-        u = 1e3 * self.__i_nominal * self.m_target
+        u = 1e3 * self.i_nominal * self.m_target
         u = self.clip_input_currents(u)
         data = {
                 'time': 0.0,
@@ -99,6 +99,9 @@ class MagnetControllerStatic(MagnetController):
             }
         
         return u, data
+    
+    def reset(self):
+        pass
 
 class MagnetControllerPID(MagnetController):
     def __init__(self):
