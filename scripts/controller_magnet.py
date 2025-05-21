@@ -72,7 +72,33 @@ class MagnetControllerStatic(MagnetController):
         self.set_current_magnet_direction(m_current)
         self.set_target_magnet_direction(m_target)
         u = 1e3 * self.__i_nominal * self.m_target
-        return self.clip_input_currents(u)
+        u = self.clip_input_currents(u)
+        data = {
+                'time': 0.0,
+                'm_x': self.m_hat[0], 
+                'm_y': self.m_hat[1], 
+                'm_z': self.m_hat[2], 
+                'm_target_x': self.m_target[0],
+                'm_target_y': self.m_target[1],
+                'm_target_z': self.m_target[2],
+                'angular_error_degrees': self.get_error_angles_in_degrees(),
+                'p_term_mag': 0, 
+                'i_term_mag': 0, 
+                'd_term_mag': 0, 
+                'input_torque_mag': 0, 
+                'KP_x': 0, 
+                'KI_x': 0, 
+                'KD_x': 0, 
+                'KP_y': 0, 
+                'KI_y': 0, 
+                'KD_y': 0, 
+                'KP_z': 0, 
+                'KI_z': 0, 
+                'KD_z': 0, 
+                'i_x': u[0], 'i_y': u[1], 'i_z': u[2]
+            }
+        
+        return u, data
 
 class MagnetControllerPID(MagnetController):
     def __init__(self):
