@@ -65,7 +65,7 @@ class RobotController():
 
     # serial functions
     def set_target_in_base_frame(self, vector : np.ndarray):
-        assert (vector.shape != (3,) and vector.shape != (3, 1)), "Target magnetic vector must be 3 dimenstional"
+        assert (vector.shape == (3,) or vector.shape == (3, 1)), "Target magnetic vector must be 3 dimenstional"
         self.__target_m_base_frame = np.vstack((np.expand_dims(np.squeeze(vector), 1), 1))
 
     def set_target_robot_tcp(self, target_tcp):
@@ -124,6 +124,7 @@ class RobotController():
 
 def main():
     robot_controller = RobotController()
+    robot_controller.set_target_in_base_frame(np.array([0.6, 0.8, 0.0]))
     robot_controller.start()
     time.sleep(10.0)
     robot_controller.shutdown()
