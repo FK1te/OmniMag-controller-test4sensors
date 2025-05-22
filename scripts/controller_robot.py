@@ -31,7 +31,7 @@ class RobotController():
         # Threading variables
         # Robot motion thread
         self.__thread_robot_motion = None
-        self.__robot_motion = threading.Event()
+        self.__stop_robot_motion = threading.Event()
 
         # Target magnetic vector in tcp frame computation thread
         self.__thread_m_tcp_computation = None
@@ -63,14 +63,27 @@ class RobotController():
             self.__thread_m_tcp_computation.join()
             print("[Compute target m in tcp frame] Joined")
 
+        self.__stop_robot_motion.set()
+        if self.__thread_robot_motion is not None:
+            self.__thread_robot_motion.join()
+            print("[Robot motion thread] Joined")
+
     # serial functions
     def set_target_in_base_frame(self, vector : np.ndarray):
         assert (vector.shape == (3,) or vector.shape == (3, 1)), "Target magnetic vector must be 3 dimenstional"
         self.__target_m_base_frame = np.vstack((np.expand_dims(np.squeeze(vector), 1), 1))
 
     def set_target_robot_tcp(self, target_tcp):
+        """
         assert (target_tcp.shape != (6,) and target_tcp.shape != (6, 1)), "Target magnetic vector must be 3 dimenstional"
         self.__target_robot_tcp_position = np.squeeze(target_tcp)
+        """
+        tcp_pos = self.__rtde_r.getActualTCPPose()
+        tcp_pos[1] += 0.1
+        self.__target_robot_tcp_position = tcp_pos
+        self.__stop_robot_motion.clear()
+        self.__thread_robot_motion = threading.Thread(target=self.move_to_target)
+        self.__thread_robot_motion.start()
 
     def __get_robot_tcp_position(self):
         self.__robot_tcp_position = self.__rtde_r.getActualTCPPose()
@@ -107,11 +120,21 @@ class RobotController():
 
     # functions to be used in the robot motion thread
     def target_robot_tcp_position_is_reached(self):
-        pass
+        if self.__target_robot_tcp_position is None:
+            return True
+        
+        tcp_pos = self.__rtde_r.getActualTCPPose()
+        return True if np.linalg.norm(tcp_pos[:3]-self.__target_robot_tcp_position[:3]) < 0.05 else False
 
     # thread functions
     def move_to_target(self):
-        pass
+        print(f"[Thread started] Moving to robot position {self.__target_robot_tcp_position[:3]}")
+        self.__rtde_c.moveL(self.__target_robot_tcp_position, 0.1, 0.05)
+        while not self.__stop_robot_motion.is_set():
+            if self.target_robot_tcp_position_is_reached():
+                self.__stop_robot_motion.set()
+                
+        print("Robot movement is complete.")
 
     def publish_target_magnetic_field_in_tcp_frame(self):
         print("[Thread started] Target magnetic field in tcp coordinate frame computation")
