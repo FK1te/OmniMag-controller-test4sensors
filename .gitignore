@@ -1,4 +1,6 @@
+# Dont add the following test files
 computations.py
+test.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

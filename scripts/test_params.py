@@ -40,7 +40,44 @@ MAGNET_CONTROLLER_PARAMS = {
     }
 }
 
-UNIVERSAL_ROBOT_PARAMS = {}
+UNIVERSAL_ROBOT_PARAMS = {
+    "ip_address": "192.168.1.100",
+    "should_reset_pos_on_startup": False,
+    "speed": 0.3,
+    "acceleration": 0.3,
+    "vertical_joints_position": np.array(
+        [np.pi, -np.pi / 2, 0, -np.pi, -np.pi / 2, -np.pi / 2]
+    ),
+    "base_joints_position": np.array(
+        [np.pi, -np.pi / 2, np.pi / 2, -np.pi, -np.pi / 2, -np.pi / 2]
+    ),
+    "update_based_on_theorical_move": True,  # check position only if a new position make any sense (e.g.: no move => no new position)
+    "translate_precision": 4,  # precision: 0.0001 m = 0.1 mm
+    "rotation_precision": 3,  # precision: 0.001 rad = 0.058 deg
+    "boundaries": {    # allowable coordinates for TCP
+        "x_min": -0.9,
+        "x_max": 0.9, # was -0.1
+        "y_min": -0.9, # was -0.45
+        "y_max": 0.9, # was 0.45
+        "z_min": 0.28,
+        "z_max": 0.9, # was 0.85
+    },
+    "speed_control": { 
+        "time_before_return": 2e-3,  # sec
+        "acceleration": 0.25,  # m / sec^2
+        "deceleration": 5,  # m / sec^2
+    },
+    "speed_tcp": { # allowable speed for TCP translation 
+        "update_interval": 0.1,  # sec
+        "max_trans": 0.07,  # m / sec
+        "max_rot": 0.2,  # rad / sec
+    },
+    "custom_pid": {
+        "loop_refresh_dt": 0.1,
+        "acceptable_dist_error_to_complete": 0.5e-3,  # m
+        "gain_kp": 5,  # No unit
+    },
+}
 
 CAMERA_PARAMS = {}
 
