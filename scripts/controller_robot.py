@@ -79,7 +79,7 @@ class RobotController():
         self.__target_robot_tcp_position = np.squeeze(target_tcp)
         """
         tcp_pos = self.__rtde_r.getActualTCPPose()
-        tcp_pos[1] += 0.1
+        tcp_pos[0] += 0.1
         self.__target_robot_tcp_position = tcp_pos
         self.__stop_robot_motion.clear()
         self.__thread_robot_motion = threading.Thread(target=self.move_to_target)
@@ -124,7 +124,7 @@ class RobotController():
             return True
         
         tcp_pos = self.__rtde_r.getActualTCPPose()
-        return True if np.linalg.norm(tcp_pos[:3]-self.__target_robot_tcp_position[:3]) < 0.05 else False
+        return True if np.linalg.norm(np.array(tcp_pos[:3])-np.array(self.__target_robot_tcp_position[:3])) < 0.05 else False
 
     # thread functions
     def move_to_target(self):
@@ -142,13 +142,15 @@ class RobotController():
             self.compute_base_to_tcp_transformation_matrix()
             self.__target_m_tcp_frame = self.get_target_in_tcp_frame()
             print(f"Target magnetic field vector in tcp frame: {self.__target_m_tcp_frame}")
-            time.sleep(0.5)
+            time.sleep(0.1)
         print("[Compute target m in tcp frame] Thread exiting")
 
 def main():
     robot_controller = RobotController()
     robot_controller.set_target_in_base_frame(np.array([0.6, 0.8, 0.0]))
     robot_controller.start()
+    time.sleep(0.25)
+    robot_controller.set_target_robot_tcp(None)
     time.sleep(10.0)
     robot_controller.shutdown()
 
