@@ -2,8 +2,8 @@ import numpy as np
 
 ARDUINO_MINIMACS6_DEFAULT_PARAMS = {
     "board": {
-        "com": "COM4",          # COM port of the Arduino Mega
-        "baudrate": 115200,     # baudrate of the Arduino Mega
+        "com": "/dev/ttyACM0",          # COM port of the Arduino Mega
+        "baudrate": 1000000,     # baudrate of the Arduino Mega
         "timeout": 1,           # seconds
     },
     "minimacs6_comm": {

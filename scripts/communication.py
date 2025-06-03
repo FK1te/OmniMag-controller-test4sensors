@@ -6,6 +6,7 @@ Python sctipt that manages communications with:
 import json
 import socket
 import serial
+import struct
 import numpy as np
 
 from test_params import ARDUINO_MINIMACS6_DEFAULT_PARAMS
@@ -86,21 +87,40 @@ class ArduinoMinimacsCommunication():
 
     def get_sensor_readings(self):
         if self.__serial_arduino:
-            self.__serial_arduino.write("UP\n".encode())
-            arduino_answer = self.__serial_arduino.readline().decode()
-            try:
-                digital_input_vec = json.loads(arduino_answer)
-                s_vec = 1e-6 * np.array([       # The sensor measurements are converted from uT to T
-                    [digital_input_vec["x1"]],
-                    [digital_input_vec["y1"]],
-                    [digital_input_vec["z1"]],
-                    [digital_input_vec["x2"]],
-                    [digital_input_vec["y2"]],
-                    [digital_input_vec["z2"]],
-                ])
-                return np.squeeze(s_vec)
-            except (json.JSONDecodeError, KeyError, ValueError):
-                return np.zeros(6)
+            self.__serial_arduino.write(b'U')
+            flags = self.__serial_arduino.read(1)
+            s_vec = np.zeros(6)
+
+            if len(flags) < 1:
+                return s_vec
+                
+            flag = flags[0]
+            float_count = 0
+            if flag & 0x01: float_count += 3
+            if flag & 0x02: float_count += 3
+
+            float_bytes = self.__serial_arduino.read(float_count * 4)
+
+            if len(float_bytes) < float_count * 4:
+                return s_vec
+
+            floats = struct.unpack('<' + 'f' * float_count, float_bytes)
+            idx = 0
+            data = {}
+
+            if flag & 0x01:
+                s_vec[idx:idx+3] = 1e-6 * floats[idx:idx+3]
+                idx += 3
+            else:
+                data["x1"] = data["y1"] = data["z1"] = None
+
+            if flag & 0x02:
+                s_vec[idx:idx+3] = 1e-6 * floats[idx:idx+3]
+            else:
+                data["x2"] = data["y2"] = data["z2"] = None
+            
+            return s_vec
+        
         else:
             return np.zeros(6)
 
