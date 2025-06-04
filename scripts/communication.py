@@ -4,6 +4,7 @@ Python sctipt that manages communications with:
     - Minimacs: to input current values
 """
 import json
+import time
 import socket
 import serial
 import struct
@@ -39,6 +40,7 @@ class ArduinoMinimacsCommunication():
                 self.__arduino_baudrate,
                 timeout=self.__arduino_timeout
             )
+            time.sleep(2)
             print(f"[✓] Connected to Arduino on {self.__arduino_port}")
         except serial.SerialException as e:
             print(f"[!] Arduino connection error: {e}")
@@ -86,43 +88,62 @@ class ArduinoMinimacsCommunication():
         return self.__serial_arduino is not None and self.__socket_minimac is not None
 
     def get_sensor_readings(self):
-        if self.__serial_arduino:
+        s_vec = np.zeros(6)
+
+        if not self.__serial_arduino:
+            print("[!] Serial connection not initialized.")
+            return s_vec
+
+        try:
+            print("[→] Sending 'U' command to Arduino...")
             self.__serial_arduino.write(b'U')
+
+            print("[←] Waiting for flag byte...")
             flags = self.__serial_arduino.read(1)
-            s_vec = np.zeros(6)
-
+            
             if len(flags) < 1:
+                print("[!] No flag byte received.")
                 return s_vec
-                
+
             flag = flags[0]
+            print(f"[✓] Flag byte received: {flag:08b}")
+
             float_count = 0
-            if flag & 0x01: float_count += 3
-            if flag & 0x02: float_count += 3
+            if flag & 0x01:
+                float_count += 3
+            if flag & 0x02:
+                float_count += 3
 
-            float_bytes = self.__serial_arduino.read(float_count * 4)
+            total_bytes = float_count * 4
+            print(f"[→] Expecting {total_bytes} bytes of float data...")
 
-            if len(float_bytes) < float_count * 4:
+            float_bytes = self.__serial_arduino.read(total_bytes)
+
+            if len(float_bytes) < total_bytes:
+                print(f"[!] Incomplete float data received: {len(float_bytes)} bytes.")
                 return s_vec
 
             floats = struct.unpack('<' + 'f' * float_count, float_bytes)
-            idx = 0
-            data = {}
 
+            idx = 0
             if flag & 0x01:
-                s_vec[idx:idx+3] = 1e-6 * floats[idx:idx+3]
+                print(f"[✓] Sensor 1 data: {floats[idx:idx+3]}")
+                s_vec[idx:idx+3] = 1e-6 * np.array(floats[idx:idx+3])
                 idx += 3
             else:
-                data["x1"] = data["y1"] = data["z1"] = None
+                print("[!] Sensor 1 data not present.")
 
             if flag & 0x02:
-                s_vec[idx:idx+3] = 1e-6 * floats[idx:idx+3]
+                print(f"[✓] Sensor 2 data: {floats[idx:idx+3]}")
+                s_vec[idx:idx+3] = 1e-6 * np.array(floats[idx:idx+3])
             else:
-                data["x2"] = data["y2"] = data["z2"] = None
-            
-            return s_vec
-        
-        else:
+                print("[!] Sensor 2 data not present.")
+
+        except Exception as e:
+            print(f"[!] Exception while reading sensor data: {e}")
             return np.zeros(6)
+
+        return s_vec
 
     def get_magnetic_field(self):
         s_vec = self.get_sensor_readings()
