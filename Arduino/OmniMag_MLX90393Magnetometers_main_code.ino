@@ -15,8 +15,8 @@ void configureSensor(Adafruit_MLX90393 &sensor, uint8_t address, bool &available
     available = false;
   } else {
     sensor.setGain(MLX90393_GAIN_1X);
-    sensor.setResolution(MLX90393_X, MLX90393_RES_16);
-    sensor.setResolution(MLX90393_Y, MLX90393_RES_16);
+    sensor.setResolution(MLX90393_X, MLX90393_RES_17);
+    sensor.setResolution(MLX90393_Y, MLX90393_RES_17);
     sensor.setResolution(MLX90393_Z, MLX90393_RES_16);
     sensor.setOversampling(MLX90393_OSR_0);
     sensor.setFilter(MLX90393_FILTER_0);

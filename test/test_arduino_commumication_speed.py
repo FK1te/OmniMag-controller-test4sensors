@@ -2,7 +2,7 @@ import serial
 import struct
 import time
 
-PORT = "/dev/ttyACM0"  # Adjust as needed
+PORT = "COM4"  # Adjust as needed
 BAUD = 1000000
 TIMEOUT = 1
 

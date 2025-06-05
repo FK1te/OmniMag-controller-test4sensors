@@ -95,18 +95,13 @@ class ArduinoMinimacsCommunication():
             return s_vec
 
         try:
-            print("[→] Sending 'U' command to Arduino...")
             self.__serial_arduino.write(b'U')
-
-            print("[←] Waiting for flag byte...")
             flags = self.__serial_arduino.read(1)
             
             if len(flags) < 1:
-                print("[!] No flag byte received.")
                 return s_vec
 
             flag = flags[0]
-            print(f"[✓] Flag byte received: {flag:08b}")
 
             float_count = 0
             if flag & 0x01:
@@ -115,29 +110,21 @@ class ArduinoMinimacsCommunication():
                 float_count += 3
 
             total_bytes = float_count * 4
-            print(f"[→] Expecting {total_bytes} bytes of float data...")
 
             float_bytes = self.__serial_arduino.read(total_bytes)
 
             if len(float_bytes) < total_bytes:
-                print(f"[!] Incomplete float data received: {len(float_bytes)} bytes.")
                 return s_vec
 
             floats = struct.unpack('<' + 'f' * float_count, float_bytes)
 
             idx = 0
             if flag & 0x01:
-                print(f"[✓] Sensor 1 data: {floats[idx:idx+3]}")
                 s_vec[idx:idx+3] = 1e-6 * np.array(floats[idx:idx+3])
                 idx += 3
-            else:
-                print("[!] Sensor 1 data not present.")
 
             if flag & 0x02:
-                print(f"[✓] Sensor 2 data: {floats[idx:idx+3]}")
                 s_vec[idx:idx+3] = 1e-6 * np.array(floats[idx:idx+3])
-            else:
-                print("[!] Sensor 2 data not present.")
 
         except Exception as e:
             print(f"[!] Exception while reading sensor data: {e}")
