@@ -18,6 +18,11 @@ time_vector = np.arange(0, duration, dt)
 U_MAX = 1000
 U_MIN = -1000
 
+
+positive_segment = 1000 * np.ones(duration/(2*dt))
+negative_segment = -1000 * np.ones(duration/(2*dt))
+positive_negative_step = np.concatenate((positive_segment, negative_segment))
+
 def saturate(signal):
     return np.clip(signal, U_MIN, U_MAX)
 
@@ -77,6 +82,24 @@ def main():
             'u1': saturate(ramp_signal(time_vector, -20)),
             'u2': saturate(ramp_signal(time_vector, 10)),
             'u3': saturate(ramp_signal(time_vector, -10))
+        },
+                {
+            'name': 'TC6_unit_step_u1',
+            'u1': positive_negative_step,
+            'u2': np.zeros_like(positive_negative_step),
+            'u3': np.zeros_like(positive_negative_step)
+        },
+        {
+            'name': 'TC7_unit_step_u2',
+            'u1': np.zeros_like(positive_negative_step),
+            'u2': positive_negative_step,
+            'u3': np.zeros_like(positive_negative_step),
+        },
+        {
+            'name': 'TC8_unit_step_u3',
+            'u1': np.zeros_like(positive_negative_step),
+            'u2': np.zeros_like(positive_negative_step),
+            'u3': positive_negative_step
         }
     ]
 
