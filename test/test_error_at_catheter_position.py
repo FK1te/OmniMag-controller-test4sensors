@@ -10,32 +10,28 @@ from datetime import datetime
 sys.path.append('./')
 sys.path.append('./scripts')
 
-import rtde_control
-import rtde_receive
-
 from scripts.communication import ArduinoMinimacsCommunication
 from scripts.controller_magnet import MagnetControllerPID
-from scripts.test_params import UNIVERSAL_ROBOT_PARAMS, ARDUINO_MINIMACS6_DEFAULT_PARAMS
+from scripts.test_params import ARDUINO_MINIMACS6_DEFAULT_PARAMS
 
 S_dagger = ARDUINO_MINIMACS6_DEFAULT_PARAMS["S_dagger_matrix"]
 
-ip_address = UNIVERSAL_ROBOT_PARAMS["ip_address"]
-rtde_c = rtde_control.RTDEControlInterface(ip_address)
-rtde_r = rtde_receive.RTDEReceiveInterface(ip_address)
-robot_tcp_position = rtde_r.getActualTCPPose()
-[UR_x, UR_y, UR_z, UR_rx, UR_ry, UR_rz] = robot_tcp_position
+[UR_x, UR_y, UR_z, UR_rx, UR_ry, UR_rz] = [ 0.7690617488094837, 
+                                           0.2543022600564637, 
+                                           0.7222612027051074, 
+                                           -2.263276906897582,
+                                            -0.12431620701839485, 
+                                            -2.085370041783]
 print(f"Robot TCP position: {UR_x}, {UR_y}, {UR_z}, {UR_rx}, {UR_ry}, {UR_rz}.")
-rtde_c.stopScript()
-rtde_r.disconnect()
 
 time_per_input = 10.0
 inputs_list = [
-    np.array([1.0, 0.0, 0.0]), 
-    np.array([0.0, 1.0, 0.0]),
-    np.array([0.0, 0.0, 1.0]),
-    np.array([-1.0, 0.0, 0.0]), 
-    np.array([0.0, -1.0, 0.0]),
-    np.array([0.0, 0.0, -1.0]),
+    np.array([0.8, -0.6, 0.0]), 
+    np.array([0.0, 0.8, 0.6]),
+    np.array([-0.6, 0.0, 0.8]),
+    np.array([0.6, 0.8, 0.0]), 
+    np.array([0.8, 0.0, 0.6]),
+    np.array([0.0, 0.6, -0.8]),
 ]
 controller = MagnetControllerPID()
 gains = {
@@ -64,7 +60,7 @@ comm.change_status_enable_disable_current(True)
 
 # === CSV SETUP ===
 filename = f"sensor_log_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
-header = ["timestamp"]
+header = ["timestamp", "m_target_tcp_x", "m_target_tcp_y", "m_target_tcp_z"]
 for i in range(1, 6):  # 5 sensors
     header += [f"MLX{i}_X", f"MLX{i}_Y", f"MLX{i}_Z"]
 header += ["angular_error_degrees", "tcp_x", "tcp_y", "tcp_z", "tcp_x", "tcp_y", "tcp_z"]
@@ -105,6 +101,7 @@ try:
 
         for i, m_target in enumerate(inputs_list):
             t0 = time.time()
+            m_target_tcp = m_target.tolist()
             while time.time() - t0 < time_per_input:
                 timestamp = datetime.now().isoformat()
                 s_vec = comm.get_sensor_readings()
@@ -113,7 +110,7 @@ try:
                 data2 = read_sensor_data(ser, 3)
                 u, data = controller.compute_control_currents(m_current=m_current, m_target=m_target)
                 comm.set_currents_in_coils(u)       
-                row = [timestamp] + data1 + data2 + [data["angular_error_degrees"], UR_x, UR_y, UR_z, UR_rx, UR_ry, UR_rz]
+                row = [timestamp] + m_target_tcp + data1 + data2 + [float(data["angular_error_degrees"]), UR_x, UR_y, UR_z, UR_rx, UR_ry, UR_rz]
                 writer.writerow(row)
                 print("Logged:", row)
                 time.sleep(0.001)
