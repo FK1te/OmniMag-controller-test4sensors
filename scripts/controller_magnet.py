@@ -56,6 +56,11 @@ class MagnetController(ABC):
         sin_theta = np.linalg.norm(self.get_error_vector())
         return np.rad2deg(np.arctan2(sin_theta, cos_theta))
     
+    def get_error_angles_in_radians(self):
+        cos_theta = np.dot(self.m_hat, self.m_target)
+        sin_theta = np.linalg.norm(self.get_error_vector())
+        return np.arctan2(sin_theta, cos_theta)
+    
     def clip_input_currents(self, u):
         if np.any(np.abs(u) > 1e3 * self.i_max):
             output_currents_values_mA = u / np.linalg.norm(u) * 1e3 * self.i_max
@@ -71,7 +76,7 @@ class MagnetControllerStatic(MagnetController):
     def compute_control_currents(self, m_current, m_target):
         self.set_current_magnet_direction(m_current)
         self.set_target_magnet_direction(m_target)
-        u = 1e3 * self.i_nominal * self.m_target
+        u = 1e3 * self.i_nominal * (np.diag([1, 0.9, 0.7]) @ self.m_target)
         u = self.clip_input_currents(u)
         data = {
                 'time': 0.0,
@@ -118,6 +123,7 @@ class MagnetControllerPID(MagnetController):
         self.t0 = None
         self.e_prev = None
         self.q_e_prev = None
+        self.t0_target = None
 
     def set_pid_gains(self, gains):
         self.kp = np.diag([gains["KP_x"], gains["KP_y"], gains["KP_z"]])
@@ -159,7 +165,17 @@ class MagnetControllerPID(MagnetController):
     def compute_control_currents(self, m_current, m_target):
         p, i, d = self.compute_pid(m_current, m_target)
         tau = self.kp @ p + self.ki @ i + self.kd @ d
-        u = np.cross(tau, self.m_hat) + self.lmbd * self.m_hat
+
+        feedforward_gain = 1500
+        """
+        if self.t0_target is not None:
+            x = time() - self.t0_target
+            if x < 0.6:
+                feedforward_gain = 1500
+            # feedforward_gain = 1500* (1 - 1/(1+np.exp(-8*(x-0.8))))
+        """
+
+        u = np.cross(tau, self.m_hat) + self.lmbd * self.m_hat # + feedforward_gain * (np.diag(self.current_dirs_in_coils) @ self.m_target)
         u = self.clip_input_currents(u)
 
         data = {
@@ -193,4 +209,5 @@ class MagnetControllerPID(MagnetController):
         self.t0 = None
         self.e_prev = None
         self.q_e_prev = None
+        self.t0_target = time()
         
