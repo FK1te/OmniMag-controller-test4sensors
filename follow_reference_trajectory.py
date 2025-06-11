@@ -82,6 +82,5 @@ def main():
         rmse = np.sqrt(((np.array(error)) ** 2).mean())
         print(f"[✓] RMSE: {rmse} degrees.")
 
-
 if __name__ == "__main__":
     main()
