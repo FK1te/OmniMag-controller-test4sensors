@@ -10,22 +10,45 @@ sys.path.append('./scripts')
 from scripts.communication import ArduinoMinimacsCommunication
 from scripts.controller_magnet import MagnetControllerStatic, MagnetControllerPID
 
-controller_name = 'static'
+controller_name = 'pid_manually_tuned_gains_2_ff_500.0'
 
-seconds_per_target = 10.0 
+seconds_per_target = 5.0 
 
 gains = {
-    'KP_x': 600.0,
-    'KI_x': 890.0,
-    'KD_x': 20.0,
-    'KP_y': 600.0,
-    'KI_y': 702.0,
-    'KD_y': 16.0,
-    'KP_z': 510.0,
-    'KI_z': 382.0,
-    'KD_z': 10.0,
-    'Lambda': 1.0
+    'KP_x': 825, 
+    'KI_x': 5775,
+    'KD_x': 77.8,
+
+    'KP_y': 1278,
+    'KI_y': 7672, 
+    'KD_y': 140,
+
+    'KP_z': 577.5,
+    'KI_z': 4908.8,
+    'KD_z': 44.8,
+
+    'Lambda': 0.0
 }
+
+gains = {
+    'KP_x': 1300, 
+    'KI_x': 1300,
+    'KD_x': 1300 * 0.05,
+
+    'KP_y': 1250, 
+    'KI_y': 1250,
+    'KD_y': 1250 * 0.05,
+
+    'KP_z': 1000,
+    'KI_z': 1000,
+    'KD_z': 1000 * 0.05,
+
+    'Lambda': 0.0
+}
+
+sat_v = 2.5
+sat_e = 0.025
+feedforward_scale = 500.0
 
 def R_X(theta):
     return np.array([
@@ -55,23 +78,23 @@ rotation_map = {
 }
 
 test_cases = [
-    {   
+     {   
         'base_vec_name': 'X',
         'base_vec': np.array([1.0, 0.0, 0.0]), 
         'rotational_axis': ['Y', 'Z'],
-        'angles_deg': [2.0, 5.0, 10.0, 30.0, 45.0, 90.0]
+        'angles_deg': [2.0, 5.0, 10.0, 30.0, 45.0, 90.0, 120.0, 150.0, 180.0]
     },
     {
         'base_vec_name': 'Y',
         'base_vec': np.array([0.0, 1.0, 0.0]), 
         'rotational_axis': ['X', 'Z'],
-        'angles_deg': [2.0, 5.0, 10.0, 30.0, 45.0, 90.0]
+        'angles_deg': [2.0, 5.0, 10.0, 30.0, 45.0, 90.0, 120.0, 150.0, 180.0]
     },
     {
         'base_vec_name': 'Z',
         'base_vec': np.array([0.0, 0.0, 1.0]), 
         'rotational_axis': ['X', 'Y'],
-        'angles_deg': [2.0, 5.0, 10.0, 30.0, 45.0, 90.0]
+        'angles_deg': [2.0, 5.0, 10.0, 30.0, 45.0, 90.0, 120.0, 150.0, 180.0]
     }
 ]
 
@@ -82,12 +105,15 @@ def main():
     for index in range(5):
         print(comm.get_sensor_readings())
 
-    if controller_name == "static":
+    if "static" in controller_name.lower():
         controller = MagnetControllerStatic()
     elif "pid" in controller_name.lower():
         global gains
         controller = MagnetControllerPID()
         controller.set_pid_gains(gains=gains)
+        controller.sat_v = sat_v 
+        controller.sat_e = sat_e
+        controller.feedforward_scale = feedforward_scale
     else:
         raise ValueError("Invalid controller name.")
 
@@ -127,7 +153,8 @@ def main():
                             rotated_vector = rotate(angle_rad) @ current_vector
                         
                             t0 = time.time()
-                            while time.time() - t0 < 10.0:
+                            controller.reset()
+                            while time.time() - t0 < seconds_per_target:
                                 m_current = comm.get_magnetic_field()
                                 u, data = controller.compute_control_currents(m_current=m_current, m_target=current_vector)
                                 comm.set_currents_in_coils(u)
@@ -141,7 +168,8 @@ def main():
                                 print(u)
 
                             t0 = time.time()
-                            while time.time() - t0 < 10.0:
+                            controller.reset()
+                            while time.time() - t0 < seconds_per_target:
                                 m_current = comm.get_magnetic_field()
                                 u, data = controller.compute_control_currents(m_current=m_current, m_target=rotated_vector)
                                 comm.set_currents_in_coils(u)
@@ -152,7 +180,9 @@ def main():
                                 time.sleep(0.1)
                                 print(data['angular_error_degrees'])
                                 print(u)
-
+            print("Tests ended.")
+            comm.set_currents_in_coils([0, 0, 0])
+            return 0
     except KeyboardInterrupt:
         print("\n[✓] Interrupted by user.")
     finally:

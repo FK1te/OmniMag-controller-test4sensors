@@ -20,7 +20,7 @@ def main():
             _ = comm.get_magnetic_field()
             t_arduino = time() - t0
             
-            current_input = [10, 10, 10]
+            current_input = [1000, 0, 0]
             t0 = time() 
             comm.set_currents_in_coils(current_input)
             t_minimacs = time() - t0
