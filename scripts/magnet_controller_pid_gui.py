@@ -78,19 +78,19 @@ class MagneticFieldControllerApp(tk.Frame):
         pid_frame = tk.LabelFrame(self, text="PID Gains", padx=10, pady=5)
         pid_frame.grid(row=1, column=1, columnspan=2, sticky="new", pady=10)
 
-        self.kp_slider_x = self._create_pid_slider(pid_frame, "Kp X", 0, default_value=600)
-        self.ki_slider_x = self._create_pid_slider(pid_frame, "Ki X", 1, default_value=893)
-        self.kd_slider_x = self._create_pid_slider(pid_frame, "Kd X", 2, default_value=20)
+        self.kp_slider_x = self._create_pid_slider(pid_frame, "Kp X", 0, default_value=1300)
+        self.ki_slider_x = self._create_pid_slider(pid_frame, "Ki X", 1, default_value=1300)
+        self.kd_slider_x = self._create_pid_slider(pid_frame, "Kd X", 2, default_value=1300 * 0.05, resolution = 1)
 
-        self.kp_slider_y = self._create_pid_slider(pid_frame, "Kp Y", 3, default_value=600)
-        self.ki_slider_y = self._create_pid_slider(pid_frame, "Ki Y", 4, default_value=702)
-        self.kd_slider_y = self._create_pid_slider(pid_frame, "Kd Y", 5, default_value=16)
+        self.kp_slider_y = self._create_pid_slider(pid_frame, "Kp Y", 3, default_value=1250)
+        self.ki_slider_y = self._create_pid_slider(pid_frame, "Ki Y", 4, default_value=1250)
+        self.kd_slider_y = self._create_pid_slider(pid_frame, "Kd Y", 5, default_value=1250 * 0.05, resolution = 1)
 
-        self.kp_slider_z = self._create_pid_slider(pid_frame, "Kp Z", 6, default_value=510)
-        self.ki_slider_z = self._create_pid_slider(pid_frame, "Ki Z", 7, default_value=382)
-        self.kd_slider_z = self._create_pid_slider(pid_frame, "Kd Z", 8, default_value=9)
+        self.kp_slider_z = self._create_pid_slider(pid_frame, "Kp Z", 6, default_value=1000)
+        self.ki_slider_z = self._create_pid_slider(pid_frame, "Ki Z", 7, default_value=1000)
+        self.kd_slider_z = self._create_pid_slider(pid_frame, "Kd Z", 8, default_value=1000 * 0.05, resolution = 1)
 
-        self.lambda_slider = self._create_pid_slider(pid_frame, "Lambda", 9, to=10, default_value=1.0, resolution=0.1)
+        self.lambda_slider = self._create_pid_slider(pid_frame, "Lambda", 9, to=10, default_value=0.0, resolution=0.1)
 
         tk.Button(pid_frame, text="Set Gains", command=self.set_gains).grid(row=10, column=0, columnspan=6, pady=10)
 
@@ -122,7 +122,7 @@ class MagneticFieldControllerApp(tk.Frame):
         entry.grid(row=row, column=col + 1, padx=5)
         return entry
 
-    def _create_pid_slider(self, parent, label, row, to=2000, default_value=0, resolution=1.0):
+    def _create_pid_slider(self, parent, label, row, to=20000, default_value=0, resolution=25.0):
         tk.Label(parent, text=label).grid(row=row, column=0, sticky='w')
         slider = tk.Scale(parent, from_=0.0, to=to, resolution=resolution,
                           orient="horizontal", length=200)
@@ -141,6 +141,7 @@ class MagneticFieldControllerApp(tk.Frame):
             if vec_norm < 1e-7:
                 raise Exception("Norm of target vector is close to 0.")
             self.target_vec = vec / vec_norm
+            controller.reset()
             print(f"Target vector set to: {self.target_vec}")
         except Exception as e:
             print(f"Error setting target vector: {e}")
@@ -195,11 +196,11 @@ class MagneticFieldControllerApp(tk.Frame):
             data['time'] = current_time
             self.data_log.loc[len(self.data_log)] = data
 
-        self.after(100, self.update_plots)
+        self.after(30, self.update_plots)
 
     def read_sensor_measurements(self):
         self.magnetic_field_meas = self.communication.get_magnetic_field()
-        self.after(100, self.read_sensor_measurements)
+        self.after(5, self.read_sensor_measurements)
 
     def save_data_log(self):
         filename = f"./data/log_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"

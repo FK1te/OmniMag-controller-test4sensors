@@ -53,13 +53,10 @@ class MagnetController(ABC):
 
     def get_error_angles_in_degrees(self):
         cos_theta = np.dot(self.m_hat, self.m_target)
-        sin_theta = np.linalg.norm(self.get_error_vector())
+        err = self.get_error_vector()
+        sin_theta = np.linalg.norm(err)
+        # sgn = 1 if err[0] > 1 else -1
         return np.rad2deg(np.arctan2(sin_theta, cos_theta))
-    
-    def get_error_angles_in_radians(self):
-        cos_theta = np.dot(self.m_hat, self.m_target)
-        sin_theta = np.linalg.norm(self.get_error_vector())
-        return np.arctan2(sin_theta, cos_theta)
     
     def clip_input_currents(self, u):
         if np.any(np.abs(u) > 1e3 * self.i_max):
@@ -76,7 +73,7 @@ class MagnetControllerStatic(MagnetController):
     def compute_control_currents(self, m_current, m_target):
         self.set_current_magnet_direction(m_current)
         self.set_target_magnet_direction(m_target)
-        u = 1e3 * self.i_nominal * (np.diag([1, 0.9, 0.7]) @ self.m_target)
+        u = 1e3 * self.i_nominal * self.m_target
         u = self.clip_input_currents(u)
         data = {
                 'time': 0.0,
@@ -123,7 +120,9 @@ class MagnetControllerPID(MagnetController):
         self.t0 = None
         self.e_prev = None
         self.q_e_prev = None
-        self.t0_target = None
+        self.t0_target = time()
+
+        self.feedforward_scale = 0.0
 
     def set_pid_gains(self, gains):
         self.kp = np.diag([gains["KP_x"], gains["KP_y"], gains["KP_z"]])
@@ -154,8 +153,8 @@ class MagnetControllerPID(MagnetController):
 
         if self.t0 is not None:
             delta_t = time() - self.t0
-            integral_term = self.q_e_prev + delta_t * proportional_term
-            derivative_term = (1/delta_t) * (proportional_term - self.e_prev)
+            integral_term = self.update_integral(delta_t * proportional_term)
+            derivative_term = self.saturation_v((1/delta_t) * (proportional_term - self.e_prev))
 
         self.t0 = time()
         self.q_e_prev = integral_term
@@ -164,20 +163,11 @@ class MagnetControllerPID(MagnetController):
     
     def compute_control_currents(self, m_current, m_target):
         p, i, d = self.compute_pid(m_current, m_target)
-        tau = self.kp @ p + self.ki @ i + self.kd @ d
-
-        feedforward_gain = 1500
-        """
-        if self.t0_target is not None:
-            x = time() - self.t0_target
-            if x < 0.6:
-                feedforward_gain = 1500
-            # feedforward_gain = 1500* (1 - 1/(1+np.exp(-8*(x-0.8))))
-        """
-
-        u = np.cross(tau, self.m_hat) + self.lmbd * self.m_hat # + feedforward_gain * (np.diag(self.current_dirs_in_coils) @ self.m_target)
+        err = self.get_error_angles_in_degrees()
+        tau = self.kp @ p + self.ki @ i + self.kd @ d 
+        u = np.cross(tau, self.m_hat) + self.lmbd * self.m_hat + (err*self.feedforward_scale/180.0) * self.m_target
         u = self.clip_input_currents(u)
-
+    
         data = {
                 'time': 0.0,
                 'm_x': self.m_hat[0], 
@@ -186,7 +176,7 @@ class MagnetControllerPID(MagnetController):
                 'm_target_x': self.m_target[0],
                 'm_target_y': self.m_target[1],
                 'm_target_z': self.m_target[2],
-                'angular_error_degrees': self.get_error_angles_in_degrees(),
+                'angular_error_degrees': err,
                 'p_term_mag': np.linalg.norm(p),
                 'i_term_mag': np.linalg.norm(i),
                 'd_term_mag': np.linalg.norm(d),
@@ -207,7 +197,6 @@ class MagnetControllerPID(MagnetController):
     
     def reset(self):
         self.t0 = None
-        self.e_prev = None
-        self.q_e_prev = None
+        self.e_prev = np.zeros(3)
+        self.q_e_prev = np.zeros(3)
         self.t0_target = time()
-        
