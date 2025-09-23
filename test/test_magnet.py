@@ -8,7 +8,7 @@ sys.path.append('./')
 sys.path.append('./scripts')
 
 from scripts.communication import ArduinoMinimacsCommunication
-from scripts.controller_magnet import MagnetControllerStatic, MagnetControllerPID
+from scripts.controller_magnet import MagnetControllerOpenLoop, MagnetControllerClosedLoop
 
 controller_name = 'pid_manually_tuned_gains_2_ff_500.0'
 
@@ -106,10 +106,10 @@ def main():
         print(comm.get_sensor_readings())
 
     if "static" in controller_name.lower():
-        controller = MagnetControllerStatic()
+        controller = MagnetControllerOpenLoop()
     elif "pid" in controller_name.lower():
         global gains
-        controller = MagnetControllerPID()
+        controller = MagnetControllerClosedLoop()
         controller.set_pid_gains(gains=gains)
         controller.sat_v = sat_v 
         controller.sat_e = sat_e

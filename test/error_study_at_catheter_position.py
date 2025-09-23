@@ -11,7 +11,7 @@ sys.path.append('./')
 sys.path.append('./scripts')
 
 from scripts.communication import ArduinoMinimacsCommunication
-from scripts.controller_magnet import MagnetControllerPID
+from scripts.controller_magnet import MagnetControllerClosedLoop
 from scripts.test_params import ARDUINO_MINIMACS6_DEFAULT_PARAMS
 
 S_dagger = ARDUINO_MINIMACS6_DEFAULT_PARAMS["S_dagger_matrix"]
@@ -58,7 +58,7 @@ def generate_vectors(step_deg=36):
 
 inputs_list = generate_vectors()
 
-controller = MagnetControllerPID()
+controller = MagnetControllerClosedLoop()
 gains = {
     'KP_x': 1235 / 1.2,
     'KI_x': 2965 / 1.2,

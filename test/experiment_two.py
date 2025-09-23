@@ -15,7 +15,7 @@ sys.path.append('./')
 sys.path.append('./scripts')
 
 from scripts.communication import ArduinoMinimacsCommunication
-from scripts.controller_magnet import MagnetControllerStatic, MagnetControllerPID
+from scripts.controller_magnet import MagnetControllerOpenLoop, MagnetControllerClosedLoop
 
 # ======== CONFIGURATION ========
 TRAJECTORY_NO = 1
@@ -75,9 +75,9 @@ sat_e = 0.03
 feedforward_scale = 2000.0
 
 if "openloop" in CONTROLLER_NAME.lower():
-    controller = MagnetControllerStatic()
+    controller = MagnetControllerOpenLoop()
 elif "closedloop" in CONTROLLER_NAME.lower():
-    controller = MagnetControllerPID()
+    controller = MagnetControllerClosedLoop()
     controller.set_pid_gains(gains=gains)
     controller.sat_v = sat_v
     controller.sat_e = sat_e

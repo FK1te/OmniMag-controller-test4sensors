@@ -10,7 +10,7 @@ sys.path.append('./')
 sys.path.append('./scripts')
 
 from scripts.communication import ArduinoMinimacsCommunication
-from scripts.controller_magnet import MagnetControllerPID
+from scripts.controller_magnet import MagnetControllerClosedLoop
 
 from sklearn.model_selection import ParameterGrid
     
@@ -33,7 +33,7 @@ gains = {
     'Lambda': 0.0
 }
 
-controller = MagnetControllerPID()
+controller = MagnetControllerClosedLoop()
 controller.set_pid_gains(gains=gains)
 
 for index in range(5):

@@ -7,11 +7,11 @@ from datetime import datetime
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from controller_magnet import MagnetControllerPID  
+from controller_magnet import MagnetControllerClosedLoop  
 from communication import ArduinoMinimacsCommunication
 
 class MagneticFieldControllerApp(tk.Frame):
-    def __init__(self, controller: MagnetControllerPID, communication : ArduinoMinimacsCommunication, master=None):
+    def __init__(self, controller: MagnetControllerClosedLoop, communication : ArduinoMinimacsCommunication, master=None):
         super().__init__(master)
         self.controller = controller
         self.communication = communication
@@ -217,7 +217,7 @@ if __name__ == "__main__":
     root = tk.Tk()
     root.title("Magnetic Field Controller")
 
-    controller = MagnetControllerPID()
+    controller = MagnetControllerClosedLoop()
     comm = ArduinoMinimacsCommunication()
     comm.change_status_enable_disable_current(True)
 

@@ -14,7 +14,7 @@ sys.path.append('./')
 sys.path.append('./scripts')
 
 from scripts.communication import ArduinoMinimacsCommunication
-from scripts.controller_magnet import MagnetControllerStatic, MagnetControllerPID
+from scripts.controller_magnet import MagnetControllerOpenLoop, MagnetControllerClosedLoop
 
 # Time base
 dt = 1.0
@@ -81,9 +81,9 @@ comm = ArduinoMinimacsCommunication()
 comm.change_status_enable_disable_current(True)
 
 if "static" in controller_name.lower():
-    controller = MagnetControllerStatic()
+    controller = MagnetControllerOpenLoop()
 elif "pid" in controller_name.lower():
-    controller = MagnetControllerPID()
+    controller = MagnetControllerClosedLoop()
     controller.set_pid_gains(gains=gains)
     controller.sat_v = sat_v
     controller.sat_e = sat_e

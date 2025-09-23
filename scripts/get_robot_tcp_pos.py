@@ -11,7 +11,7 @@ import rtde_control
 import rtde_receive
 
 from communication import ArduinoMinimacsCommunication
-from controller_magnet import MagnetControllerPID
+from controller_magnet import d
 from test_params import UNIVERSAL_ROBOT_PARAMS, ARDUINO_MINIMACS6_DEFAULT_PARAMS
 
 S_dagger = ARDUINO_MINIMACS6_DEFAULT_PARAMS["S_dagger_matrix"]
