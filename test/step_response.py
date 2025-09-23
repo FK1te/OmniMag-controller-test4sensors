@@ -10,7 +10,7 @@ sys.path.append('./scripts')
 from scripts.communication import ArduinoMinimacsCommunication
 from scripts.controller_magnet import MagnetControllerOpenLoop, MagnetControllerClosedLoop
 
-controller_name = 'pid_manually_tuned_gains_2_ff_500.0'
+controller_name = 'openloop'
 
 seconds_per_target = 5.0 
 
