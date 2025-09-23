@@ -66,7 +66,7 @@ class MagnetController(ABC):
         output_currents_values_mA = np.round(np.diag(self.current_dirs_in_coils) @  output_currents_values_mA)
         return output_currents_values_mA        
 
-class MagnetControllerStatic(MagnetController):
+class MagnetControllerOpenLoop(MagnetController):
     def __init__(self):
         super().__init__()
 
@@ -74,6 +74,10 @@ class MagnetControllerStatic(MagnetController):
         self.set_current_magnet_direction(m_current)
         self.set_target_magnet_direction(m_target)
         u = 1e3 * self.i_nominal * self.m_target
+        u[0] *= self.i_coefficients[0]
+        u[1] *= self.i_coefficients[1]
+        u[2] *= self.i_coefficients[2]
+
         u = self.clip_input_currents(u)
         data = {
                 'time': 0.0,
@@ -105,7 +109,7 @@ class MagnetControllerStatic(MagnetController):
     def reset(self):
         pass
 
-class MagnetControllerPID(MagnetController):
+class MagnetControllerClosedLoop(MagnetController):
     def __init__(self):
         super().__init__()
         pid_params = MAGNET_CONTROLLER_PARAMS["pid_params"]
@@ -165,7 +169,12 @@ class MagnetControllerPID(MagnetController):
         p, i, d = self.compute_pid(m_current, m_target)
         err = self.get_error_angles_in_degrees()
         tau = self.kp @ p + self.ki @ i + self.kd @ d 
-        u = np.cross(tau, self.m_hat) + self.lmbd * self.m_hat + (err*self.feedforward_scale/180.0) * self.m_target
+        uff = np.array([
+            self.m_target[0] * self.i_coefficients[0],
+            self.m_target[1] * self.i_coefficients[1],
+            self.m_target[2] * self.i_coefficients[2]
+        ])
+        u = np.cross(tau, self.m_hat) + self.lmbd * self.m_hat + (err*self.feedforward_scale/180.0) * uff
         u = self.clip_input_currents(u)
     
         data = {

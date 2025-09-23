@@ -27,7 +27,11 @@ MAGNET_CONTROLLER_PARAMS = {
             "coil_y": 1,    # should normally be correct, values can be 1 or -1
             "coil_z": 1,     # should normally be correct, values can be 1 or -1
         },
-        "I_coefficients": [1, 1, 1],
+        """
+        For 60 mm magnetic head: "I_coefficients": [1, 0.9, 0.7], 
+        For 80 mm magnetic head: "I_coefficients": [1, 1.0, 1.0], 
+        """
+        "I_coefficients": [1, 0.9, 0.7], 
     },
     "pid_params" : {
     "kp" : 1.0,
@@ -77,8 +81,3 @@ UNIVERSAL_ROBOT_PARAMS = {
         "gain_kp": 5,  # No unit
     },
 }
-
-CAMERA_PARAMS = {}
-
-VISION_PARAMS = {}
-
