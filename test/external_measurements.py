@@ -1,4 +1,6 @@
-# Magnet Control System - Follow Target Trajectory and Log Magnetic Field Error
+# External Magnetic Field Measurement Comparison Test
+# This script runs a magnetic field tracking test using both internal (robot-mounted) and external Hall sensors.
+# It supports both open-loop and closed-loop controllers, evaluates angular errors, and logs performance data.
 
 import os
 import sys
@@ -50,7 +52,7 @@ else:
 
 trajectory = np.stack((x, y, z), axis=1)
 
-# Serial setup
+# Serial setup for external sensor
 COM_PORT = 'COM7'
 BAUD_RATE = 1000000
 TIMEOUT = 1
@@ -66,7 +68,8 @@ rotation_matrix = np.array([
 r_vector = np.array([0, 0, -0.2])
 
 # Controller setup
-controller_name = f'{speed}x_static'
+controller_name = f'{speed}x_open_loop'
+
 gains = {
     'KP_x': 825, 'KI_x': 5775, 'KD_x': 77.8,
     'KP_y': 1278, 'KI_y': 7672, 'KD_y': 140,
@@ -80,9 +83,9 @@ feedforward_scale = 2000.0
 comm = ArduinoMinimacsCommunication()
 comm.change_status_enable_disable_current(True)
 
-if "static" in controller_name.lower():
+if "open_loop" in controller_name.lower():
     controller = MagnetControllerOpenLoop()
-elif "pid" in controller_name.lower():
+elif "closed_loop" in controller_name.lower():
     controller = MagnetControllerClosedLoop()
     controller.set_pid_gains(gains=gains)
     controller.sat_v = sat_v

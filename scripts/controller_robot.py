@@ -1,10 +1,14 @@
 """
-Python script that manages communication with the universal robot. 
-Functionalities:
-    - Set/get end effector (tcp) position and orientation
-    - Perform path planning and following for the robotic system
-    - Compute the magnetic field vector in TCP coordinate frame during motion
+Controls Universal Robot to position the end effector (TCP) for magnetic field interaction.
+
+Features:
+- Connects to Universal Robot via RTDE interface
+- Retrieves and updates TCP position
+- Moves robot toward target TCP position
+- Computes transformation matrix from robot base to TCP frame
+- Publishes target magnetic vector in TCP frame via background thread
 """
+
 import time
 import threading
 import numpy as np
@@ -13,89 +17,85 @@ import rtde_receive
 
 from test_params import UNIVERSAL_ROBOT_PARAMS
 
-class RobotController():
+
+class RobotController:
     def __init__(self):
-        # For connection with the robot
-        self.__ip_address = UNIVERSAL_ROBOT_PARAMS["ip_address"]
-        self.__rtde_c = None
-        self.__rtde_r = None
-        self.__is_connected = False
+        # Connection
+        self._ip_address = UNIVERSAL_ROBOT_PARAMS["ip_address"]
+        self._rtde_c = None
+        self._rtde_r = None
+        self._is_connected = False
 
-        # Class vectors and matrices
-        self.__target_m_base_frame = None
-        self.__target_m_tcp_frame = None
-        self.__robot_tcp_position = None
-        self.__target_robot_tcp_position = None
-        self.__base_to_tcp_transformation_matrix = None
+        # State variables
+        self._target_m_base_frame = None
+        self._target_m_tcp_frame = None
+        self._robot_tcp_position = None
+        self._target_robot_tcp_position = None
+        self._base_to_tcp_matrix = None
 
-        # Threading variables
-        # Robot motion thread
-        self.__thread_robot_motion = None
-        self.__stop_robot_motion = threading.Event()
+        # Threading
+        self._thread_robot_motion = None
+        self._stop_robot_motion = threading.Event()
 
-        # Target magnetic vector in tcp frame computation thread
-        self.__thread_m_tcp_computation = None
-        self.__stop_m_tcp_computation = threading.Event()
+        self._thread_m_tcp_computation = None
+        self._stop_m_tcp_computation = threading.Event()
 
-    def __connect_to_robot(self):
+    def _connect_to_robot(self):
         try:
-            self.__rtde_c = rtde_control.RTDEControlInterface(self.__ip_address)
-            self.__rtde_r = rtde_receive.RTDEReceiveInterface(self.__ip_address)
-            self.__is_connected = True
-        except Exception as e:
-            self.__is_connected = False
-            raise ValueError(f"Cannot connect to Universal Robot at IP Adress: {self.__ip_address}")
+            self._rtde_c = rtde_control.RTDEControlInterface(self._ip_address)
+            self._rtde_r = rtde_receive.RTDEReceiveInterface(self._ip_address)
+            self._is_connected = True
+        except Exception:
+            self._is_connected = False
+            raise ValueError(f"Cannot connect to Universal Robot at IP Address: {self._ip_address}")
 
     def is_connected(self):
-        return self.__rtde_r.isConnected() and self.__rtde_c.isConnected()
+        return self._rtde_r.isConnected() and self._rtde_c.isConnected()
 
     def start(self):
-        self.__connect_to_robot()
-        self.__get_robot_tcp_position()
-        if self.__thread_m_tcp_computation is None or not self.__thread_m_tcp_computation.is_alive():
-            self.__stop_m_tcp_computation.clear()
-            self.__thread_m_tcp_computation = threading.Thread(target=self.publish_target_magnetic_field_in_tcp_frame)
-            self.__thread_m_tcp_computation.start()
+        self._connect_to_robot()
+        self._get_robot_tcp_position()
+        if self._thread_m_tcp_computation is None or not self._thread_m_tcp_computation.is_alive():
+            self._stop_m_tcp_computation.clear()
+            self._thread_m_tcp_computation = threading.Thread(
+                target=self.publish_target_magnetic_field_in_tcp_frame
+            )
+            self._thread_m_tcp_computation.start()
 
     def shutdown(self):
-        self.__stop_m_tcp_computation.set()
-        if self.__thread_m_tcp_computation is not None:
-            self.__thread_m_tcp_computation.join()
+        self._stop_m_tcp_computation.set()
+        if self._thread_m_tcp_computation is not None:
+            self._thread_m_tcp_computation.join()
             print("[Compute target m in tcp frame] Joined")
 
-        self.__stop_robot_motion.set()
-        if self.__thread_robot_motion is not None:
-            self.__thread_robot_motion.join()
+        self._stop_robot_motion.set()
+        if self._thread_robot_motion is not None:
+            self._thread_robot_motion.join()
             print("[Robot motion thread] Joined")
 
-    # serial functions
-    def set_target_in_base_frame(self, vector : np.ndarray):
-        assert (vector.shape == (3,) or vector.shape == (3, 1)), "Target magnetic vector must be 3 dimenstional"
-        self.__target_m_base_frame = np.vstack((np.expand_dims(np.squeeze(vector), 1), 1))
+    def set_target_in_base_frame(self, vector: np.ndarray):
+        assert vector.shape in [(3,), (3, 1)], "Target magnetic vector must be 3-dimensional"
+        self._target_m_base_frame = np.vstack((np.expand_dims(np.squeeze(vector), 1), 1))
 
     def set_target_robot_tcp(self, target_tcp):
-        """
-        assert (target_tcp.shape != (6,) and target_tcp.shape != (6, 1)), "Target magnetic vector must be 3 dimenstional"
-        self.__target_robot_tcp_position = np.squeeze(target_tcp)
-        """
-        tcp_pos = self.__rtde_r.getActualTCPPose()
-        tcp_pos[0] += 0.1
-        self.__target_robot_tcp_position = tcp_pos
-        self.__stop_robot_motion.clear()
-        self.__thread_robot_motion = threading.Thread(target=self.move_to_target)
-        self.__thread_robot_motion.start()
+        # This function currently performs a simple offset move instead of using input
+        tcp_pos = self._rtde_r.getActualTCPPose()
+        tcp_pos[0] += 0.1  # Move X by +10cm
+        self._target_robot_tcp_position = tcp_pos
+        self._stop_robot_motion.clear()
+        self._thread_robot_motion = threading.Thread(target=self.move_to_target)
+        self._thread_robot_motion.start()
 
-    def __get_robot_tcp_position(self):
-        self.__robot_tcp_position = self.__rtde_r.getActualTCPPose()
-        return self.__robot_tcp_position
-    
-    # functions to be used in the target publishing thread
+    def _get_robot_tcp_position(self):
+        self._robot_tcp_position = self._rtde_r.getActualTCPPose()
+        return self._robot_tcp_position
+
     def compute_base_to_tcp_transformation_matrix(self):
-        if not self.__is_connected:
+        if not self._is_connected:
             raise ConnectionError("Robot not connected.")
-        [x, y, z, rx, ry, rz] = self.__get_robot_tcp_position()
+        [x, y, z, rx, ry, rz] = self._get_robot_tcp_position()
 
-        # Convert rotation vector (rx, ry, rz) to rotation matrix using Rodrigues' formula
+        # Convert axis-angle to rotation matrix (Rodrigues' formula)
         theta = np.linalg.norm([rx, ry, rz])
         if theta < 1e-6:
             R = np.eye(3)
@@ -111,39 +111,37 @@ class RobotController():
         T = np.eye(4)
         T[:3, :3] = R
         T[:3, 3] = [x, y, z]
-        self.__base_to_tcp_transformation_matrix = T
+        self._base_to_tcp_matrix = T
 
     def get_target_in_tcp_frame(self):
-        if self.__base_to_tcp_transformation_matrix is not None and self.__target_m_base_frame is not None:
-            transformed_vector = self.__base_to_tcp_transformation_matrix @ self.__target_m_base_frame
-            return transformed_vector[:3]
+        if self._base_to_tcp_matrix is not None and self._target_m_base_frame is not None:
+            transformed = self._base_to_tcp_matrix @ self._target_m_base_frame
+            return transformed[:3]
 
-    # functions to be used in the robot motion thread
     def target_robot_tcp_position_is_reached(self):
-        if self.__target_robot_tcp_position is None:
+        if self._target_robot_tcp_position is None:
             return True
-        
-        tcp_pos = self.__rtde_r.getActualTCPPose()
-        return True if np.linalg.norm(np.array(tcp_pos[:3])-np.array(self.__target_robot_tcp_position[:3])) < 0.05 else False
 
-    # thread functions
+        current_pos = self._rtde_r.getActualTCPPose()
+        return np.linalg.norm(np.array(current_pos[:3]) - np.array(self._target_robot_tcp_position[:3])) < 0.05
+
     def move_to_target(self):
-        print(f"[Thread started] Moving to robot position {self.__target_robot_tcp_position[:3]}")
-        self.__rtde_c.moveL(self.__target_robot_tcp_position, 0.1, 0.05)
-        while not self.__stop_robot_motion.is_set():
+        print(f"[Thread started] Moving to robot position {self._target_robot_tcp_position[:3]}")
+        self._rtde_c.moveL(self._target_robot_tcp_position, 0.1, 0.05)
+        while not self._stop_robot_motion.is_set():
             if self.target_robot_tcp_position_is_reached():
-                self.__stop_robot_motion.set()
-                
+                self._stop_robot_motion.set()
         print("Robot movement is complete.")
 
     def publish_target_magnetic_field_in_tcp_frame(self):
         print("[Thread started] Target magnetic field in tcp coordinate frame computation")
-        while not self.__stop_m_tcp_computation.is_set():
+        while not self._stop_m_tcp_computation.is_set():
             self.compute_base_to_tcp_transformation_matrix()
-            self.__target_m_tcp_frame = self.get_target_in_tcp_frame()
-            print(f"Target magnetic field vector in tcp frame: {self.__target_m_tcp_frame}")
+            self._target_m_tcp_frame = self.get_target_in_tcp_frame()
+            print(f"Target magnetic field vector in tcp frame: {self._target_m_tcp_frame}")
             time.sleep(0.1)
         print("[Compute target m in tcp frame] Thread exiting")
+
 
 def main():
     robot_controller = RobotController()
@@ -153,6 +151,7 @@ def main():
     robot_controller.set_target_robot_tcp(None)
     time.sleep(10.0)
     robot_controller.shutdown()
+
 
 if __name__ == "__main__":
     main()

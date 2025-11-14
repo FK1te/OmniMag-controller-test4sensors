@@ -1,59 +1,64 @@
-import os
-import sys
-import csv
-import time
-import serial
-import struct
-import numpy as np
-from datetime import datetime
+"""
+Utility script for querying and manipulating the Universal Robot TCP pose.
 
+Features:
+- Connects to a Universal Robot (UR) via RTDE
+- Retrieves and prints the current TCP position and orientation
+- Provides optional example movements (commented for safety)
+- Intended to be run from a Linux shell (not Windows)
+"""
+
+import time
+import numpy as np
 import rtde_control
 import rtde_receive
 
-from communication import ArduinoMinimacsCommunication
-from controller_magnet import d
-from test_params import UNIVERSAL_ROBOT_PARAMS, ARDUINO_MINIMACS6_DEFAULT_PARAMS
+from test_params import UNIVERSAL_ROBOT_PARAMS
 
-S_dagger = ARDUINO_MINIMACS6_DEFAULT_PARAMS["S_dagger_matrix"]
 
+# Connect to UR robot
 ip_address = UNIVERSAL_ROBOT_PARAMS["ip_address"]
-rtde_c = rtde_control.RTDEControlInterface(ip_address)
-rtde_r = rtde_receive.RTDEReceiveInterface(ip_address)
-robot_tcp_position = rtde_r.getActualTCPPose()
-[UR_x, UR_y, UR_z, UR_rx, UR_ry, UR_rz] = robot_tcp_position
-tcp_position = [
-    UR_x,
-    UR_y,
-    UR_z,
-    UR_rx,
-    UR_ry,
-    UR_rz,
+rtde_control_interface = rtde_control.RTDEControlInterface(ip_address)
+rtde_receive_interface = rtde_receive.RTDEReceiveInterface(ip_address)
+
+# Retrieve actual TCP pose
+tcp_pose = rtde_receive_interface.getActualTCPPose()
+UR_x, UR_y, UR_z, UR_rx, UR_ry, UR_rz = tcp_pose
+
+# Example: Override with a fixed test TCP pose
+tcp_pose = [
+    0.6773973514703341, 0.34778435810601754, 
+    0.6808982730077721, 2.2159557980970006,
+    0.006550863337124177, 2.2214592596556475
 ]
 
-tcp_position = [0.6773973514703341, 0.34778435810601754, 
-                0.6808982730077721, 2.2159557980970006, 0.006550863337124177, 2.2214592596556475]
+# Example path (circular trajectory) — commented out unless needed
+t_vals = np.arange(0, 10, 0.1)
+x_offset = 0.1 * np.sin(t_vals)
+y_offset = 0.1 * np.cos(t_vals)
 
-t = np.arange(0, 10, 0.1)
-x = 0.1 * np.sin(t)
-y = 0.1 * np.cos(t)
 """
-new_tcp_position = [pos for pos in tcp_position]
-new_tcp_position[1] += 0.1
-rtde_c.moveL(tcp_position, 0.05, 0.01, asynchronous=False)
+# Uncomment for testing circular motion around TCP
+rtde_control_interface.moveL(tcp_pose, 0.05, 0.01, asynchronous=False)
 time.sleep(5)
-for k in range(10):
-    new_tcp_position = [pos for pos in tcp_position]
-    new_tcp_position[0] += x[k]
-    new_tcp_position[1] += y[k]
-    rtde_c.moveL(new_tcp_position, 0.05, 0.01, asynchronous=False)
+
+for k in range(len(t_vals)):
+    modified_pose = tcp_pose.copy()
+    modified_pose[0] += x_offset[k]
+    modified_pose[1] += y_offset[k]
+    rtde_control_interface.moveL(modified_pose, 0.05, 0.01, asynchronous=False)
 """
-sleep = [np.pi, -np.pi / 2, 0, -np.pi, -np.pi / 2, -np.pi / 2]
-ready = [np.pi, -np.pi / 2, np.pi / 2, -np.pi, -np.pi / 2, -np.pi / 2]
-# rtde_c.moveJ(ready, 0.05, 0.01, asynchronous=False)
-rtde_c.moveJ(sleep, 0.05, 0.01, asynchronous=False)
-# rtde_c.moveL(tcp_position, 0.05, 0.01, asynchronous=False)
-# robot_tcp_position = rtde_r.getActualTCPPose()
-[UR_x, UR_y, UR_z, UR_rx, UR_ry, UR_rz] = robot_tcp_position
+
+# Predefined robot joint configurations
+sleep_configuration = [np.pi, -np.pi / 2, 0, -np.pi, -np.pi / 2, -np.pi / 2]
+ready_configuration = [np.pi, -np.pi / 2, np.pi / 2, -np.pi, -np.pi / 2, -np.pi / 2]
+
+# Move robot to sleep configuration
+rtde_control_interface.moveJ(sleep_configuration, 0.05, 0.01, asynchronous=False)
+
+# Print TCP information
 print(f"Robot TCP position: {UR_x}, {UR_y}, {UR_z}, {UR_rx}, {UR_ry}, {UR_rz}.")
-rtde_c.stopScript()
-rtde_r.disconnect()
+
+# Clean shutdown
+rtde_control_interface.stopScript()
+rtde_receive_interface.disconnect()

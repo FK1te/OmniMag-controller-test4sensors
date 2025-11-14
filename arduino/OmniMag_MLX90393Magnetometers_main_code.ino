@@ -1,8 +1,12 @@
+// OmniMag Hall Sensor Reader
+// This Arduino sketch reads magnetic field data from two MLX90393 sensors over I2C,
+// and sends the data in binary format over Serial upon request or periodically in debug mode.
+
 #include <Wire.h>
 #include <Adafruit_MLX90393.h>
 
-#define BAUD_RATE 1000000  // Fast communication
-#define DEBUG_MODE false
+#define BAUD_RATE 1000000   // High-speed Serial communication
+#define DEBUG_MODE false    // Set to true for continuous streaming
 
 Adafruit_MLX90393 sensor1 = Adafruit_MLX90393();
 Adafruit_MLX90393 sensor2 = Adafruit_MLX90393();
@@ -10,6 +14,7 @@ Adafruit_MLX90393 sensor2 = Adafruit_MLX90393();
 bool sensor1Available = false;
 bool sensor2Available = false;
 
+// Initialize and configure MLX90393 sensor
 void configureSensor(Adafruit_MLX90393 &sensor, uint8_t address, bool &available) {
   if (!sensor.begin_I2C(address, &Wire)) {
     available = false;
@@ -27,12 +32,13 @@ void configureSensor(Adafruit_MLX90393 &sensor, uint8_t address, bool &available
 void setup() {
   Wire.begin();
   Serial.begin(BAUD_RATE);
-  while (!Serial) delay(10);
+  while (!Serial) delay(10);  // Wait for serial to initialize
 
   configureSensor(sensor1, 0x0C, sensor1Available);
   configureSensor(sensor2, 0x0F, sensor2Available);
 }
 
+// Read from both sensors and send raw binary float values with flags
 void send_binary_data() {
   float x1 = 0, y1 = 0, z1 = 0;
   float x2 = 0, y2 = 0, z2 = 0;
@@ -41,7 +47,7 @@ void send_binary_data() {
   bool ok2 = sensor2Available && sensor2.readData(&x2, &y2, &z2);
 
   uint8_t flags = (ok1 ? 1 : 0) | (ok2 ? 2 : 0);
-  Serial.write(flags);
+  Serial.write(flags);  // 1: sensor1 ok, 2: sensor2 ok
 
   if (ok1) {
     Serial.write((uint8_t*)&x1, sizeof(float));
@@ -58,14 +64,14 @@ void send_binary_data() {
 void loop() {
   if (DEBUG_MODE) {
     send_binary_data();
-    delay(20);
+    delay(20);  // Roughly 50 Hz in debug mode
     return;
   }
 
   if (Serial.available()) {
     char c = Serial.read();
     if (c == 'U') {
-      send_binary_data();
+      send_binary_data();  // Triggered read when host sends 'U'
     }
   }
 }
