@@ -41,7 +41,7 @@ class ArduinoMinimacsCommunication:
                 timeout=self._arduino_timeout
             )
             time.sleep(2)  # Wait for Arduino to initialize
-            print(f"[✓] Connected to Arduino on {self._arduino_port}")
+            print(f"[✓] Connected to [Hall Sensors Cluster] Arduino on {self._arduino_port}")
         except serial.SerialException as e:
             print(f"[!] Arduino connection error: {e}")
 
@@ -77,13 +77,16 @@ class ArduinoMinimacsCommunication:
         return self._serial_arduino is not None and self._socket_minimac is not None
 
     def get_sensor_readings(self) -> np.ndarray:
+        # TO BE UPDATED - Should be OK
+        # We need to read 4 sensors
+        # 12D sensor vector
         """
-        Retrieves the 6D sensor vector from Arduino.
+        Retrieves the 12D sensor vector from Arduino.
 
         Returns:
             np.ndarray: Sensor readings in microtesla (converted to Tesla)
         """
-        s_vec = np.zeros(6)
+        s_vec = np.zeros(12)
 
         if not self._serial_arduino:
             print("[!] Serial connection not initialized.")
@@ -103,6 +106,10 @@ class ArduinoMinimacsCommunication:
                 float_count += 3
             if flag & 0x02:
                 float_count += 3
+            if flag & 0x03:
+                float_count += 3
+            if flag & 0x04:
+                float_count += 3
 
             total_bytes = float_count * 4
             float_bytes = self._serial_arduino.read(total_bytes)
@@ -118,10 +125,16 @@ class ArduinoMinimacsCommunication:
                 idx += 3
             if flag & 0x02:
                 s_vec[idx:idx + 3] = 1e-6 * np.array(floats[idx:idx + 3])
+                idx += 3
+            if flag & 0x03:
+                s_vec[idx:idx + 3] = 1e-6 * np.array(floats[idx:idx + 3])
+                idx += 3
+            if flag & 0x04:
+                s_vec[idx:idx + 3] = 1e-6 * np.array(floats[idx:idx + 3])
 
         except Exception as e:
             print(f"[!] Exception while reading sensor data: {e}")
-            return np.zeros(6)
+            return np.zeros(12)
 
         return s_vec
 

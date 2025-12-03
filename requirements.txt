@@ -2,4 +2,4 @@ pandas
 numpy
 pyserial
 matplotlib
-ur-rtde
+# ur-rtde

@@ -19,7 +19,7 @@ from scripts.communication import ArduinoMinimacsCommunication
 from scripts.controller_magnet import MagnetControllerOpenLoop, MagnetControllerClosedLoop
 
 # Time base
-dt = 1.0
+dt = 1.0  # Consider changing by 2 seconds - Time step for steady-state
 total_trajectory_time = 240
 speed = 1
 
@@ -52,14 +52,22 @@ else:
 
 trajectory = np.stack((x, y, z), axis=1)
 
-# Serial setup for external sensor
+
+# Serial setup for External sensor - 2nd Arduino
 COM_PORT = 'COM7'
 BAUD_RATE = 1000000
 TIMEOUT = 1
-ser = serial.Serial(COM_PORT, BAUD_RATE, timeout=TIMEOUT)
-time.sleep(2)
+try:
+    ser = serial.Serial(COM_PORT, BAUD_RATE, timeout=TIMEOUT)
+    time.sleep(2)  # Wait for Arduino to initialize
+    print(f"[✓] Connected to [External sensor] Arduino on {COM_PORT}")
+except serial.SerialException as e:
+    print(f"[!] Arduino connection error: {e}")
+
+
 
 # Rotation and position constants
+# For external sensor only - Correct rotation matrix
 rotation_matrix = np.array([
     [0, 0, 1],
     [0, -1, 0],
@@ -80,6 +88,8 @@ sat_v = 0.9
 sat_e = 0.03
 feedforward_scale = 2000.0
 
+
+# Call the class Communication to use its functions
 comm = ArduinoMinimacsCommunication()
 comm.change_status_enable_disable_current(True)
 
@@ -96,6 +106,8 @@ else:
 
 # Helper functions
 def read_sensor_data(ser):
+    # ONLY FOR 1 sensor
+    # (external measurement - catheter tip)
     ser.write(b'U')
     raw = ser.read(1)
     if not raw:
@@ -105,7 +117,7 @@ def read_sensor_data(ser):
         data = ser.read(12)
         if len(data) == 12:
             x, y, z = struct.unpack('fff', data)
-            return [x * 1e-6, y * 1e-6, z * 1e-6]
+            return [x * 1e-6, y * 1e-6, z * 1e-6] # converted to tesla (instead of micro-tesla)
     return [None, None, None]
 
 def compute_target_m(m, r, catheter2tcp):
@@ -151,7 +163,11 @@ def follow_trajectory():
         if target_reset:
             controller.reset()
             target_reset = False
+
+        # Get magnetic field - From communication class
+        # Read the cluster of 4 hall sensors
         m_current = comm.get_magnetic_field()
+        print(m_current)
         u, _ = controller.compute_control_currents(m_current=m_current, m_target=m_target)
         comm.set_currents_in_coils(u)
 

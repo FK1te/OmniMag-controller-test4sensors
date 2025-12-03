@@ -8,6 +8,8 @@
 
 Adafruit_MLX90393 sensor1 = Adafruit_MLX90393();
 Adafruit_MLX90393 sensor2 = Adafruit_MLX90393();
+Adafruit_MLX90393 sensor3 = Adafruit_MLX90393
+
 
 bool sensor1Available = false;
 bool sensor2Available = false;
