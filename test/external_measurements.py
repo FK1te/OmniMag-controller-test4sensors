@@ -54,7 +54,7 @@ trajectory = np.stack((x, y, z), axis=1)
 
 
 # Serial setup for External sensor - 2nd Arduino
-COM_PORT = 'COM7'
+COM_PORT = 'COM5'
 BAUD_RATE = 1000000
 TIMEOUT = 1
 try:
