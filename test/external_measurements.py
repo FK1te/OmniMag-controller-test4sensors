@@ -173,6 +173,9 @@ def follow_trajectory():
         u, _ = controller.compute_control_currents(m_current=m_current, m_target=m_target)
         comm.set_currents_in_coils(u)
 
+        # Current catheter = External sensor (m_current_xyz)
+        # Target           = From compute_target_m (See above)
+        # What we should obtain at the catheter tip, from OmniMag4Sensors cluster
         m_current_catheter = read_sensor_data(ser)
         err = angular_error_deg(m_target_catheter, m_current_catheter)
         error_log.append(err)
