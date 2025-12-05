@@ -35,6 +35,8 @@ void configureSensor(Adafruit_MLX90393 &sensor, uint8_t address, bool &available
 
 void setup() {
   Wire.begin();
+  Wire.setClock(400000);    // Enables I2C Fast Mode (400 kHz)
+
   Serial.begin(BAUD_RATE);
   while (!Serial) delay(10);  // Wait for serial to initialize
 
