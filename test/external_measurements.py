@@ -97,7 +97,7 @@ if "open_loop" in controller_name.lower():
     controller = MagnetControllerOpenLoop()
 elif "closed_loop" in controller_name.lower():
     controller = MagnetControllerClosedLoop()
-    controller.set_pid_gains(gains=gains)
+    controller.set_closed_loop_gains(gains=gains) # previously set_pid_gains but function doesn't exist
     controller.sat_v = sat_v
     controller.sat_e = sat_e
     controller.feedforward_scale = feedforward_scale
