@@ -73,7 +73,9 @@ rotation_matrix = np.array([
     [0, -1, 0],
     [1, 0, 0]
 ])
-r_vector = np.array([0, 0, -0.2])
+# r_vector = np.array([0, 0, -0.2]) # - TO BE VERIFIED 
+r_vector = 1e-3 * np.array([86.6, -86.6, -86.6])
+
 
 # Controller setup
 controller_name = f'{speed}x_open_loop'
