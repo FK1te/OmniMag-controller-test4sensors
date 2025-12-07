@@ -102,13 +102,13 @@ class ArduinoMinimacsCommunication:
             flag = flags[0]
 
             float_count = 0
-            # if flag & 0x01:
-            #     float_count += 3
-            # if flag & 0x02:
-            #     float_count += 3
-            if flag & 0x03:
+            if flag & 0x01:
+                float_count += 3
+            if flag & 0x02:
                 float_count += 3
             if flag & 0x04:
+                float_count += 3
+            if flag & 0x08:
                 float_count += 3
 
             total_bytes = float_count * 4
@@ -120,16 +120,16 @@ class ArduinoMinimacsCommunication:
             floats = struct.unpack('<' + 'f' * float_count, float_bytes)
 
             idx = 0
-            # if flag & 0x01:
-            #     s_vec[idx:idx + 3] = 1e-6 * np.array(floats[idx:idx + 3])
-            #     idx += 3
-            # if flag & 0x02:
-            #     s_vec[idx:idx + 3] = 1e-6 * np.array(floats[idx:idx + 3])
-            #     idx += 3
-            if flag & 0x03:
+            if flag & 0x01:
+                s_vec[idx:idx + 3] = 1e-6 * np.array(floats[idx:idx + 3])
+                idx += 3
+            if flag & 0x02:
                 s_vec[idx:idx + 3] = 1e-6 * np.array(floats[idx:idx + 3])
                 idx += 3
             if flag & 0x04:
+                s_vec[idx:idx + 3] = 1e-6 * np.array(floats[idx:idx + 3])
+                idx += 3
+            if flag & 0x08:
                 s_vec[idx:idx + 3] = 1e-6 * np.array(floats[idx:idx + 3])
 
         except Exception as e:

@@ -58,7 +58,7 @@ void send_binary_data() {
   bool ok3 = sensor3Available && sensor3.readData(&x3, &y3, &z3);
   bool ok4 = sensor4Available && sensor4.readData(&x4, &y4, &z4);
 
-  uint8_t flags = (ok1 ? 1 : 0) | (ok2 ? 2 : 0) | (ok3 ? 3 : 0) | (ok4 ? 4 : 0);
+  uint8_t flags = (ok1 ? 1 : 0) | (ok2 ? 2 : 0) | (ok3 ? 4 : 0) | (ok4 ? 8 : 0);
   Serial.write(flags);  // 1: sensor1 ok, 2: sensor2 ok, 3: sensor3 ok, 4: sensor4 ok
 
   if (ok1) {
@@ -137,9 +137,7 @@ void loop() {
 
   if (Serial.available()) {
     char c = Serial.read();
-    if (c == 'U') {
-      send_binary_data();  // Triggered read when host sends 'U'
-      // send_readable_data();
-    }
+    if (c == 'U') send_binary_data();  // Triggered read when host sends 'U'
+    if (c == 'P') send_readable_data(); 
   }
 }
