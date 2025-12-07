@@ -86,7 +86,7 @@ class ArduinoMinimacsCommunication:
         Returns:
             np.ndarray: Sensor readings in microtesla (converted to Tesla)
         """
-        s_vec = np.zeros(12)
+        s_vec = np.zeros(6)
 
         if not self._serial_arduino:
             print("[!] Serial connection not initialized.")
@@ -134,7 +134,7 @@ class ArduinoMinimacsCommunication:
 
         except Exception as e:
             print(f"[!] Exception while reading sensor data: {e}")
-            return np.zeros(12)
+            return np.zeros(6)
 
         return s_vec
 
