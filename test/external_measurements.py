@@ -19,7 +19,7 @@ from scripts.communication import ArduinoMinimacsCommunication
 from scripts.controller_magnet import MagnetControllerOpenLoop, MagnetControllerClosedLoop
 
 # Time base
-dt = 1.0  # Consider changing by 2 seconds - Time step for steady-state
+dt = 2.0  # Consider changing by 2 seconds - Time step for steady-state
 total_trajectory_time = 240
 speed = 1
 
@@ -169,7 +169,7 @@ def follow_trajectory():
         # Get magnetic field - From communication class
         # Read the cluster of 4 hall sensors
         m_current = comm.get_magnetic_field()
-        print(m_current)
+        # print(m_current)
         u, _ = controller.compute_control_currents(m_current=m_current, m_target=m_target)
         comm.set_currents_in_coils(u)
 
@@ -179,6 +179,7 @@ def follow_trajectory():
         m_current_catheter = read_sensor_data(ser)
         err = angular_error_deg(m_target_catheter, m_current_catheter)
         error_log.append(err)
+        print("Angle error :", err)
 
         log_data.append({
             'time': time.time() - t0,
@@ -212,7 +213,7 @@ def main():
         print(f"[✓] Mean error: {mean_error:.4f} degrees.")
 
         df_log = pd.DataFrame(log_data)
-        filename = f'{controller_name}_dt_{dt}_avg_error_{mean_error:.2f}.csv'
+        filename = f'{controller_name}__traj{trajectory_no}_dt_{dt}_avg_error_{mean_error:.2f}.csv'
         df_log.to_csv(os.path.join(os.getcwd(), filename), index=False)
         print(f"[✓] Data saved to {filename}")
 
