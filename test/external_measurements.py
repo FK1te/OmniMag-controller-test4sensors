@@ -18,6 +18,8 @@ sys.path.append('./scripts')
 from scripts.communication import ArduinoMinimacsCommunication
 from scripts.controller_magnet import MagnetControllerOpenLoop, MagnetControllerClosedLoop
 
+
+# =================== TRAJECTORY DEFINITION ===================
 # Time base
 dt = 2.0  # Consider changing by 2 seconds - Time step for steady-state
 total_trajectory_time = 240
@@ -52,7 +54,7 @@ else:
 
 trajectory = np.stack((x, y, z), axis=1)
 
-
+# =================== EXTERNAL SENSOR SETUP ===================
 # Serial setup for External sensor - 2nd Arduino
 COM_PORT = 'COM5'
 BAUD_RATE = 1000000
@@ -63,8 +65,6 @@ try:
     print(f"[✓] Connected to [External sensor] Arduino on {COM_PORT}")
 except serial.SerialException as e:
     print(f"[!] Arduino connection error: {e}")
-
-
 
 # Rotation and position constants
 # For external sensor only - Correct rotation matrix
@@ -77,6 +77,7 @@ rotation_matrix = np.array([
 r_vector = 1e-3 * np.array([86.6, -86.6, -86.6])
 
 
+# =================== CONTROLLER SETUP ===================
 # Controller setup
 controller_name = f'{speed}x_open_loop'
 
